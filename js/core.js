@@ -17,20 +17,24 @@ function toast(msg) {
   clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2200);
 }
 
+/* Do cloudu (app.json) jde deník, nastavení a příznak "právě cvičí". Plány jsou ve sdíleném plans.json. */
 function snapshot() {
-  return { plans: S.plans, logs: S.logs.slice(0, 150), settings: S.settings, sess: S.sess };
+  return {
+    logs: S.logs.slice(0, 150), settings: S.settings, sess: S.sess, updated: Date.now(),
+    live: S.sess ? { start: S.sess.start, dayT: S.sess.dayT, planName: S.sess.planName } : null
+  };
 }
+const snapshotLocal = () => Object.assign({ plans: S.plans }, snapshot());
 function applyData(d) {
   if (!d || typeof d !== 'object') return;
-  S.plans = Array.isArray(d.plans) ? d.plans : [];
-  ensureIds(S.plans);
+  if (Array.isArray(d.plans)) { S.plans = d.plans; ensureIds(S.plans); }
   S.logs = Array.isArray(d.logs) ? d.logs : [];
   S.settings = Object.assign({ level: 1 }, d.settings || {});
   if (!S.settings.eq || typeof S.settings.eq !== 'object') S.settings.eq = {};
   S.sess = d.sess || null;
 }
 function saveLocal() {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(snapshot())); } catch (e) {}
+  try { localStorage.setItem(LS_KEY, JSON.stringify(snapshotLocal())); } catch (e) {}
 }
 function loadLocal() {
   try { const raw = localStorage.getItem(LS_KEY); if (raw) applyData(JSON.parse(raw)); } catch (e) {}
@@ -38,12 +42,14 @@ function loadLocal() {
 function persist() {
   if (MODE === 'coach') { coachPersist(); return; }
   saveLocal();
-  if (S.settings.coachOn) pushSharedSoon();
+  if (P.doc && Store.ready) plansSoon();
   if (!dbDoc) return;
   dirty = true;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(flush, 900);
 }
+/* okamžité uložení (začátek a konec tréninku), aby trenér hned viděl, že se cvičí */
+function flushNow() { if (!dbDoc) return; dirty = true; clearTimeout(saveTimer); flush(); }
 async function flush() {
   if (saving || !dbDoc || !dirty) return;
   saving = true; dirty = false;
@@ -56,21 +62,22 @@ async function initCloud() {
   try {
     if (!(await Store.init())) return;
     if (Store.cfg.role === 'trainer') { await enterCoach(); return; }
-    if (Store.isManual()) { if (S.settings.coachOn) startClientShare(); return; }
-    dbDoc = Store.doc('app');
-    const snap = await dbDoc.get();
-    if (snap.exists) {
-      const remote = snap.data();
-      // novější data vyhrávají: porovnáme počet tréninků, rozpracovaný trénink z tohoto zařízení nechám
-      const rl = (remote.logs || []).length, ll = S.logs.length;
-      if (rl >= ll) {
-        const keepSess = S.sess;
-        applyData(remote);
-        if (!S.sess && keepSess) S.sess = keepSess;
-        saveLocal(); render();
-      } else { persist(); }
-    } else if (S.plans.length || S.logs.length) { persist(); }
-    if (S.settings.coachOn) startClientShare();
+    if (!Store.isManual()) {
+      dbDoc = Store.doc('app');
+      const snap = await dbDoc.get();
+      if (snap.exists) {
+        const remote = snap.data();
+        // novější data vyhrávají: porovnáme počet tréninků, rozpracovaný trénink z tohoto zařízení nechám
+        const rl = (remote.logs || []).length, ll = S.logs.length;
+        if (rl >= ll) {
+          const keepSess = S.sess;
+          applyData(remote);
+          if (!S.sess && keepSess) S.sess = keepSess;
+          saveLocal(); render();
+        } else { flushNow(); }
+      } else if (S.logs.length || S.sess) { flushNow(); }
+    }
+    startPlansSync();
   } catch (e) { toast('Úložiště není dostupné, pracuji s daty v tomto zařízení'); }
 }
 
@@ -137,7 +144,7 @@ function startSession(planId, dayIdx) {
     })
   };
   d.ex.forEach(i => { i.chg = null; });
-  ui.tab = 'home'; persist(); if (S.settings.coachOn) pushShared(); render(); startTick(); holdScreen();
+  ui.tab = 'home'; persist(); flushNow(); render(); startTick(); holdScreen();
 }
 /* Displej zůstane při tréninku zapnutý (Screen Wake Lock). Na starších iOS verzích v aplikaci z plochy nemusí fungovat. */
 let wl = null;
@@ -168,6 +175,6 @@ function finishSession() {
   const items = s.items.map(it => ({ x: it.x, sets: it.sets.filter(z => z.ok).map(z => ({ w: +z.w || 0, r: +z.r || 0, ok: true })) })).filter(it => it.sets.length);
   if (!items.length) { S.sess = null; releaseScreen(); persist(); render(); toast('Trénink zahozen, nic nebylo odcvičeno'); return; }
   S.logs.unshift({ id: uid(), date: s.start, dur: Math.round((Date.now() - s.start) / 1000), planId: s.planId, planName: s.planName, dayT: s.dayT, items });
-  S.sess = null; releaseScreen(); clearInterval(tick); persist(); if (S.settings.coachOn) pushShared(); ui.tab = 'hist'; render();
+  S.sess = null; releaseScreen(); clearInterval(tick); persist(); flushNow(); applyRemotePlans(); ui.tab = 'hist'; render();
   toast('Trénink uložen');
 }

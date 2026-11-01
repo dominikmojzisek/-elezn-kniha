@@ -30,14 +30,14 @@ function settingsDialog() {
       <div class="muted" style="font-size:13px">Heslo se ukládá jen v tomto prohlížeči. Použij aplikační heslo z Nextcloudu, ne hlavní.</div>
     </div>
     <div class="stack" data-prov="dropbox webdav">
-      <label class="field"><span class="lbl">Cesta k soukromému deníku (klient)</span><input id="s-app" value="${esc(c.appPath)}" autocomplete="off"></label>
-      <label class="field"><span class="lbl">Cesta ke sdílenému souboru s trenérem</span><input id="s-coach" value="${esc(c.coachPath)}" autocomplete="off"></label>
+      <label class="field"><span class="lbl">Složka v úložišti</span><input id="s-folder" value="${esc(c.folder)}" autocomplete="off"></label>
+      <div class="muted" style="font-size:13px">Klient: sem se uloží app.json a plans.json. Složku nasdílej trenérovi s právem úprav. Trenér: zadej cestu ke sdílené složce od klienta (obvykle se objeví v kořeni úložiště pod stejným názvem).</div>
     </div>
-    <div class="stack" data-prov="manual"><div class="muted" style="font-size:14px">Data zůstávají v tomto prohlížeči. Zálohu a přenos mezi klientem a trenérem děláš souborem níže, který můžeš uložit třeba do iCloud Drive nebo poslat zprávou.</div></div>
+    <div class="stack" data-prov="manual"><div class="muted" style="font-size:14px">Data zůstávají v tomto prohlížeči. Zálohu a přenos mezi klientem a trenérem děláš soubory níže, které můžeš uložit třeba do iCloud Drive nebo poslat zprávou.</div></div>
     <div class="row"><button class="btn pri grow" data-act="setsave">Uložit a připojit</button><button class="btn" data-act="close">Zavřít</button></div>
     <div class="lbl">Soubory</div>
     <div class="row"><button class="btn sm" data-act="exportf" data-n="app">Export deníku</button><button class="btn sm" data-act="importf" data-n="app">Import deníku</button></div>
-    <div class="row"><button class="btn sm" data-act="exportf" data-n="coach">Export coach.json</button><button class="btn sm" data-act="importf" data-n="coach">Import coach.json</button></div>`);
+    <div class="row"><button class="btn sm" data-act="exportf" data-n="plans">Export plánů</button><button class="btn sm" data-act="importf" data-n="plans">Import plánů</button></div>`);
   applyProvVisibility(c.provider);
 }
 function applyProvVisibility(v) {
@@ -51,10 +51,14 @@ function downloadJson(obj, name) {
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 }
 async function exportFile(name) {
-  if (name === 'app') { downloadJson(snapshot(), 'app.json'); return; }
-  const snap = await Store.doc('coach').get();
-  if (!snap.exists) { toast('Sdílený soubor zatím neexistuje'); return; }
-  downloadJson(snap.data(), 'coach.json');
+  if (name === 'app') {
+    if (Store.cfg.role === 'trainer') { const sn = await Store.doc('app').get(); if (!sn.exists) { toast('Deník zatím neexistuje'); return; } downloadJson(sn.data(), 'app.json'); }
+    else downloadJson(snapshotLocal(), 'app.json');
+    return;
+  }
+  const snap = await Store.doc('plans').get();
+  if (!snap.exists) { toast('Soubor s plány zatím neexistuje'); return; }
+  downloadJson(snap.data(), 'plans.json');
 }
 async function importFile(input) {
   const name = input.dataset.n, f = input.files && input.files[0]; input.value = '';
@@ -62,8 +66,11 @@ async function importFile(input) {
   try {
     const obj = JSON.parse(await f.text());
     if (typeof obj !== 'object' || !obj || Array.isArray(obj)) throw new Error('Soubor nemá správný formát');
-    if (name === 'app') { applyData(obj); saveLocal(); if (dbDoc) { dirty = true; await flush(); } }
-    else await Store.doc('coach').set(obj);
+    if (name === 'app') {
+      if (Store.cfg.role === 'trainer') await Store.doc('app').set(obj);
+      else { applyData(obj); saveLocal(); if (dbDoc) { dirty = true; await flush(); } }
+    }
+    else await Store.doc('plans').set(obj);
     toast('Soubor načten'); setTimeout(() => location.reload(), 500);
   } catch (e) { toast('Import se nepovedl: ' + (e.message || 'neplatný soubor')); }
 }
@@ -75,7 +82,7 @@ const SETTINGS_ACTIONS = {
     const c = Store.cfg;
     Object.assign(c, {
       role: g('s-role'), provider: g('s-prov'), dbxKey: g('s-key').trim(), davUrl: g('s-url').trim(), davUser: g('s-user').trim(), davPass: g('s-pass'),
-      appPath: normPath(g('s-app'), '/ZeleznaKniha/app.json'), coachPath: normPath(g('s-coach'), '/ZeleznaKniha-sdileni/coach.json')
+      folder: normPath(g('s-folder'), '/ZeleznaKniha').replace(/\/+$/, '')
     });
     Store.save();
     if (c.provider === 'dropbox' && !DbxProv.ready()) {

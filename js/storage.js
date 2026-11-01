@@ -1,14 +1,15 @@
 /* ===== Úložiště =====
-   Aplikace nepotřebuje žádný server ani databázi. Data jsou dva JSON soubory:
-     app.json    soukromý deník klienta (plány, tréninky, nastavení)
-     coach.json  sdílený soubor mezi klientem a trenérem (kopie plánů, report, změny)
+   Aplikace nepotřebuje žádný server ani databázi. Data jsou dva JSON soubory v jedné složce:
+     app.json    deník klienta: tréninky, nastavení a příznak "právě cvičí" (píše jen klient)
+     plans.json  plány a seznam změn od trenéra (píše klient i trenér)
+   Klient složku nasdílí trenérovi ve svém úložišti (Dropbox, Nextcloud). Trenér je v ní host.
    Soubory leží u poskytovatele podle nastavení: Dropbox, WebDAV (Nextcloud) nebo ručně (export/import souboru).
    Všichni poskytovatelé mají stejné rozhraní: read(path) -> {data, rev} | null, write(path, obj, rev, mode).
    Souběžné zápisy hlídá revize (Dropbox rev, WebDAV ETag); při kolizi se čte a zapisuje znovu. */
 const CFG_KEY = 'zk.cfg';
 const DEFAULT_CFG = {
   provider: 'manual', role: 'client',
-  appPath: '/ZeleznaKniha/app.json', coachPath: '/ZeleznaKniha-sdileni/coach.json',
+  folder: '/ZeleznaKniha',
   dbxKey: '', davUrl: '', davUser: '', davPass: ''
 };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -200,7 +201,7 @@ const Store = {
     return this.ready;
   },
   isManual() { return this.prov.kind === 'manual'; },
-  path(name) { return name === 'coach' ? this.cfg.coachPath : this.cfg.appPath; },
+  path(name) { return (this.cfg.folder || '/ZeleznaKniha').replace(/\/+$/, '') + '/' + (name === 'plans' ? 'plans.json' : 'app.json'); },
   doc(name) { return new Doc(this, name); }
 };
 Store.load();
