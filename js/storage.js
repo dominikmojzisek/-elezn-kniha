@@ -55,16 +55,18 @@ const DbxProv = {
     });
   },
   async handleRedirect() {
-    const code = new URLSearchParams(location.search).get('code'); if (!code) return;
+    const qs = new URLSearchParams(location.search), code = qs.get('code'), derr = qs.get('error');
+    if (!code && !derr) return;
     const verifier = sessionStorage.getItem('zk.pkce');
     history.replaceState(null, '', location.pathname);
-    if (!verifier) return;
+    if (derr) throw new Error('Dropbox: ' + (qs.get('error_description') || derr));
+    if (!verifier) throw new Error('Přihlášení se nedokončilo (aplikace se po návratu z Dropboxu otevřela jinde). Zkus Připojit znovu a dokonči přihlášení ve stejném okně.');
     const r = await fetch('https://api.dropboxapi.com/oauth2/token', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ code, grant_type: 'authorization_code', client_id: this.key(), code_verifier: verifier, redirect_uri: this.redirectUri() })
     });
     const j = await r.json();
-    if (!r.ok) throw new Error(j.error_description || 'Přihlášení k Dropboxu selhalo');
+    if (!r.ok) throw new Error('Dropbox: ' + (j.error_description || j.error || 'přihlášení selhalo'));
     localStorage.setItem('zk.dbx', JSON.stringify({ refresh: j.refresh_token, access: j.access_token, exp: Date.now() + j.expires_in * 1000 - 60000 }));
     sessionStorage.removeItem('zk.pkce');
   },
