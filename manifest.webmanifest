@@ -1,0 +1,12 @@
+{
+  "name": "Železná kniha",
+  "short_name": "Železná kniha",
+  "description": "Tréninkový deník a plány na posilování",
+  "lang": "cs",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ECEEF1",
+  "theme_color": "#2749E8",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
