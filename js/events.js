@@ -46,6 +46,7 @@ const curPlan = () => S.plans.find(x => x.id === ui.openPlan);
 const curDay = () => { const p = curPlan(); return p && p.days[ui.editDay]; };
 
 const ACTIONS = {
+  awake: () => { S.settings.keepAwake = (S.settings.keepAwake === false); if (S.settings.keepAwake) holdScreen(); else releaseScreen(); persist(); render(); },
   eq: () => eqDialog(),
   eqall: () => { S.settings.eq = {}; persist(); eqDialog(); },
   eqfree: () => { const m = {}; EQLIST.forEach(g => g.items.forEach(([t]) => m[t] = ['db', 'bb', 'kb', 'trx', 'sled', 'med', 'box', 'bands', 'glute'].includes(t))); S.settings.eq = m; persist(); eqDialog(); },
@@ -113,7 +114,7 @@ const ACTIONS = {
   rest0: () => { S.sess.rest = null; persist(); render(); },
   finish: () => finishSession(),
   discard: () => askDlg('Zahodit rozpracovaný trénink?', 'dodiscard'),
-  dodiscard: () => { S.sess = null; clearInterval(tick); tick = null; closeDlg(); persist(); render(); },
+  dodiscard: () => { S.sess = null; releaseScreen(); clearInterval(tick); tick = null; closeDlg(); persist(); render(); },
   openlog: el => { ui.hist = ui.hist === el.dataset.l ? null : el.dataset.l; render(); },
   dellog: el => askDlg('Smazat tento záznam?', 'dodellog', `data-l="${el.dataset.l}"`),
   dodellog: el => { S.logs = S.logs.filter(l => l.id !== el.dataset.l); ui.hist = null; closeDlg(); persist(); render(); }
@@ -158,4 +159,10 @@ dlg = document.createElement('dialog'); dlg.setAttribute('aria-label', 'Dialog')
 loadLocal();
 if (S.sess) startTick();
 render();
+if (S.sess) holdScreen();
 initCloud();
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  const hadSW = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (hadSW) navigator.serviceWorker.addEventListener('controllerchange', () => toast('Aplikace se aktualizovala, nová verze se načte při dalším otevření'));
+}

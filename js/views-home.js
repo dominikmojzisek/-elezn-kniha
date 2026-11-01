@@ -63,7 +63,8 @@ function viewSession() {
       <div class="sets"><div class="set" style="font-size:11px"><span></span><span class="lbl" style="text-align:center">kg</span><span class="lbl" style="text-align:center">opakování</span><span></span></div>${sets}</div>
       <div class="row"><button class="btn sm ghost" data-act="addset" data-i="${i}">+ Série</button><button class="btn sm ghost" data-act="delset" data-i="${i}">− Série</button></div></div>`;
   }).join('');
-  return `<div class="top"><div><small>${esc(s.planName)}</small><h1>${esc(s.dayT)}</h1></div></div>${timer}
+  const awake = 'wakeLock' in navigator ? `<div class="chips"><button class="chip" aria-pressed="${S.settings.keepAwake !== false}" data-act="awake">Displej zůstane zapnutý</button></div>` : '';
+  return `<div class="top"><div><small>${esc(s.planName)}</small><h1>${esc(s.dayT)}</h1></div></div>${timer}${awake}
     <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}"><i style="width:${total ? done / total * 100 : 0}%"></i></div>${items}
     <div class="row"><button class="btn grow" data-act="sessadd">+ Přidat cvik</button></div>
     <div class="row"><button class="btn pri grow" data-act="finish">Dokončit trénink</button><button class="btn bad" data-act="discard">Zahodit</button></div>`;

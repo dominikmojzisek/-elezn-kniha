@@ -137,8 +137,17 @@ function startSession(planId, dayIdx) {
     })
   };
   d.ex.forEach(i => { i.chg = null; });
-  ui.tab = 'home'; persist(); if (S.settings.coachOn) pushShared(); render(); startTick();
+  ui.tab = 'home'; persist(); if (S.settings.coachOn) pushShared(); render(); startTick(); holdScreen();
 }
+/* Displej zůstane při tréninku zapnutý (Screen Wake Lock). Na starších iOS verzích v aplikaci z plochy nemusí fungovat. */
+let wl = null;
+async function holdScreen() {
+  if (!S.sess || S.settings.keepAwake === false || !('wakeLock' in navigator) || wl) return;
+  try { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => { wl = null; }); } catch (e) { wl = null; }
+}
+function releaseScreen() { if (wl) { try { wl.release(); } catch (e) {} wl = null; } }
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden) holdScreen(); });
+
 function startTick() {
   clearInterval(tick);
   tick = setInterval(() => {
@@ -157,8 +166,8 @@ function startTick() {
 function finishSession() {
   const s = S.sess; if (!s) return;
   const items = s.items.map(it => ({ x: it.x, sets: it.sets.filter(z => z.ok).map(z => ({ w: +z.w || 0, r: +z.r || 0, ok: true })) })).filter(it => it.sets.length);
-  if (!items.length) { S.sess = null; persist(); render(); toast('Trénink zahozen, nic nebylo odcvičeno'); return; }
+  if (!items.length) { S.sess = null; releaseScreen(); persist(); render(); toast('Trénink zahozen, nic nebylo odcvičeno'); return; }
   S.logs.unshift({ id: uid(), date: s.start, dur: Math.round((Date.now() - s.start) / 1000), planId: s.planId, planName: s.planName, dayT: s.dayT, items });
-  S.sess = null; clearInterval(tick); persist(); if (S.settings.coachOn) pushShared(); ui.tab = 'hist'; render();
+  S.sess = null; releaseScreen(); clearInterval(tick); persist(); if (S.settings.coachOn) pushShared(); ui.tab = 'hist'; render();
   toast('Trénink uložen');
 }
