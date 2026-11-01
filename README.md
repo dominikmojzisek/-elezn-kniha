@@ -61,6 +61,17 @@ V režimu **Ručně** zůstávají data v prohlížeči a přenášíš je soubo
 - Mezi klientem a trenérem se posílá `coach.json` (**Export coach.json** / **Import coach.json**), třeba přes sdílenou složku iCloudu nebo zprávou.
 - V ručním režimu nelze hlídat, že klient právě cvičí. Úpravy plánu před tréninkem musí trenér s klientem domluvit.
 
+## Mobil, offline a displej
+
+- Aplikace je PWA. Na iPhonu: Safari, Sdílet, Přidat na plochu. Na Androidu: Chrome, menu, Nainstalovat aplikaci.
+- Po prvním načtení se všechny soubory uloží do mezipaměti (`sw.js`), takže se aplikace otevře i bez signálu.
+  Synchronizace s cloudem pak proběhne, až je zase připojení. Nová verze se stáhne na pozadí a načte se při dalším otevření.
+  Číslo verze doplní workflow při nasazení. Při lokálním vývoji (`__BUILD__`) po změně souborů smaž data stránky nebo
+  v prohlížeči zapni „Update on reload“ pro service worker.
+- Při tréninku drží aplikace displej rozsvícený (Screen Wake Lock). Jde vypnout tlačítkem „Displej zůstane zapnutý“.
+  Na starších verzích iOS v aplikaci z plochy tato funkce nemusí fungovat.
+- Přihlášení k Dropboxu na iPhonu proveď přímo v aplikaci z plochy. Safari a aplikace z plochy mají oddělené úložiště.
+
 ## 3. Trenér
 
 1. Klient v aplikaci na záložce **Plány** zapne **Sdílení s trenérem**.
@@ -90,8 +101,8 @@ protože k tomu jsou potřeba tvoje klíče a server. Při prvním zapojení sle
 ## Struktura
 
 ```
-index.html, config.js, manifest.webmanifest, icon.svg
-css/style.css
+index.html        stránka včetně stylů (CSS je vložené přímo v ní)
+config.js, manifest.webmanifest, icon.svg, sw.js
 js/data.js        databáze cviků a šablony rozpisů
 js/equipment.js   vybavení klubu a závislosti cviků
 js/storage.js     úložiště: Dropbox, WebDAV, ruční režim
