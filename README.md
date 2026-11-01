@@ -3,12 +3,16 @@
 Tréninkový deník a plány na posilování. Statická webová aplikace bez serveru a bez databáze:
 běží na GitHub Pages a data ukládá jako dva JSON soubory do tvého cloudového úložiště.
 
-- `app.json` je soukromý deník klienta (plány, tréninky, nastavení).
-- `coach.json` je sdílený soubor s trenérem (kopie plánů, report, seznam změn).
+V jedné složce jsou dva soubory (výchozí `/ZeleznaKniha`):
+
+- `app.json` je deník klienta (tréninky, nastavení, příznak „právě cvičí“). Zapisuje ho jen klient.
+- `plans.json` jsou plány a seznam změn od trenéra. Zapisuje klient i trenér.
+
+Klient složku nasdílí trenérovi ve svém úložišti. Trenér je ve složce host.
 
 Funkce: 53 cviků na konkrétních strojích, filtr podle vybavení klubu, generátor plánů, vlastní plány,
-záznam skutečných vah a opakování, časovač pauz, graf pokroku, report pro trenéra a úpravy plánu trenérem
-(jen před začátkem tréninku, každá změna je označená).
+záznam skutečných vah a opakování, časovač pauz, graf pokroku, trenér s přístupem do sdílené složky a úpravy plánu
+(jen když klient necvičí, každá změna je označená a klient ji potvrdí).
 
 ## 1. Nasazení na GitHub Pages
 
@@ -33,8 +37,7 @@ V aplikaci otevři **Připojení** (tlačítko na záložce Dnes) a vyber úlož
 4. Zkopíruj **App key** do `config.js` (`dropboxAppKey`) nebo ho zadej přímo v dialogu Připojení.
 5. V dialogu Připojení zvol Dropbox a klikni na **Uložit a připojit**. Přihlásíš se v Dropboxu a vrátíš se do aplikace.
 
-Soubory se vytvoří samy: `/ZeleznaKniha/app.json` (soukromý) a `/ZeleznaKniha-sdileni/coach.json` (pro trenéra).
-Cesty jdou změnit v dialogu Připojení.
+Soubory se vytvoří samy ve složce `/ZeleznaKniha`. Název složky jde změnit v dialogu Připojení.
 
 ### Nextcloud / WebDAV
 
@@ -58,7 +61,7 @@ iCloud Drive nemá veřejné rozhraní, které by šlo použít z webové strán
 V režimu **Ručně** zůstávají data v prohlížeči a přenášíš je souborem:
 
 - Zálohu deníku uložíš tlačítkem **Export deníku** a soubor dáš do iCloud Drive (přes Soubory / sdílení).
-- Mezi klientem a trenérem se posílá `coach.json` (**Export coach.json** / **Import coach.json**), třeba přes sdílenou složku iCloudu nebo zprávou.
+- Mezi klientem a trenérem se posílají `app.json` (deník, trenér ho jen čte) a `plans.json` (plány, **Export plánů** / **Import plánů**), třeba přes sdílenou složku iCloudu nebo zprávou.
 - V ručním režimu nelze hlídat, že klient právě cvičí. Úpravy plánu před tréninkem musí trenér s klientem domluvit.
 
 ## Mobil, offline a displej
@@ -74,26 +77,26 @@ V režimu **Ručně** zůstávají data v prohlížeči a přenášíš je soubo
 
 ## 3. Trenér
 
-1. Klient v aplikaci na záložce **Plány** zapne **Sdílení s trenérem**.
-2. Klient nasdílí složku se `coach.json` trenérovi s právem úprav (Dropbox: Sdílet složku, Nextcloud: sdílení složky).
-   Soukromý `app.json` je ve vedlejší složce a trenér ho nevidí.
-3. Trenér otevře stejnou adresu aplikace, v **Připojení** zvolí roli **Trenér**, připojí své úložiště a zadá cestu ke sdílenému
-   souboru (sdílená složka se mu obvykle objeví v kořeni úložiště se stejným názvem).
-4. Trenér vidí report a upravuje plán. Změny jsou nejdřív koncept, klient je uvidí až po **Odeslat změny klientovi**.
-5. Klient dostane hlášení, změny použije a upravené cviky jsou označené štítkem „Změna“.
-   Po zahájení tréninku se úpravy a odeslání trenérovi zamknou, odemknou se po dokončení.
+1. Klient ve svém Dropboxu (nebo Nextcloudu) nasdílí složku `ZeleznaKniha` trenérovi s právem úprav.
+   Trenér uvidí deník i plány, žádné zapínání sdílení v aplikaci není.
+2. Trenér otevře stejnou adresu aplikace, v **Připojení** zvolí roli **Trenér**, připojí své úložiště a zadá cestu ke sdílené
+   složce (obvykle se mu objeví v kořeni úložiště pod stejným názvem).
+3. Trenér vidí report z deníku a upravuje plány. Změna se uloží hned a označí se u cviku štítkem „Změna“.
+4. Klient dostane v aplikaci hlášení „Trenér změnil plán“ se seznamem a potvrdí ho tlačítkem **Rozumím**.
+5. Když klient trénuje, trenér plán měnit nemůže (příznak v `app.json`). Po dokončení tréninku se zámek uvolní.
+   Trenér má v souboru `app.json` právo zápisu, ale aplikace do něj nezapisuje.
 
 ## 4. Co je dobré vědět
 
 - Soubory nemají push, aplikace kontroluje změny každých 15 s (trenér) a 30 s (klient) a při návratu na stránku.
-- Souběžné zápisy hlídá revize souboru. Při kolizi se zápis zopakuje, trenér při změně od klienta dostane upozornění a načte plán znovu.
+- Souběžné zápisy hlídá revize souboru. Při kolizi se zápis zopakuje, kdo při kolizi prohrál, dostane upozornění a plán se načte znovu.
 - Přihlašovací token Dropboxu (refresh token) a heslo k WebDAV jsou uložené v prohlížeči. Používej jen své zařízení
   a u Nextcloudu aplikační heslo, které jde kdykoli zrušit.
 - Data jsou čitelný JSON, takže jde zálohovat a prohlížet i bez aplikace.
 
 ## 5. Stav testování
 
-Logika (ukládání se souběžnými zápisy, sdílení, úpravy trenéra, označení změn, zámek při tréninku) je ověřená simulací
+Logika (ukládání se souběžnými zápisy, sdílení složky, úpravy trenéra, označení změn, zámek při tréninku) je ověřená simulací
 nad ručním úložištěm. Připojení k Dropboxu a Nextcloudu nebylo zkoušeno proti skutečným službám,
 protože k tomu jsou potřeba tvoje klíče a server. Při prvním zapojení sleduj konzoli prohlížeče
 (chyby 401, 403 nebo CORS prozradí špatný klíč, oprávnění nebo hlavičky serveru).
@@ -108,7 +111,7 @@ js/equipment.js   vybavení klubu a závislosti cviků
 js/storage.js     úložiště: Dropbox, WebDAV, ruční režim
 js/core.js        stav, ukládání, generátor plánů, průběh tréninku
 js/views-*.js     obrazovky (Dnes, Plány, Cviky, Deník)
-js/coach.js       sdílení, trenérský pohled, změny
+js/coach.js       sdílená složka, trenérský pohled, změny
 js/settings.js    Připojení, export a import
 js/events.js      události a start aplikace
 ```
