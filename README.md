@@ -73,8 +73,8 @@ V režimu **Ručně** zůstávají data v prohlížeči a přenášíš je soubo
 - Aplikace je PWA. Na iPhonu: Safari, Sdílet, Přidat na plochu. Na Androidu: Chrome, menu, Nainstalovat aplikaci.
 - Po prvním načtení se všechny soubory uloží do mezipaměti (`sw.js`), takže se aplikace otevře i bez signálu.
   Synchronizace s cloudem pak proběhne, až je zase připojení. Nová verze se stáhne na pozadí a načte se při dalším otevření.
-  Číslo verze doplní workflow při nasazení. Při lokálním vývoji (`__BUILD__`) po změně souborů smaž data stránky nebo
-  v prohlížeči zapni „Update on reload“ pro service worker.
+  Soubory se berou primárně ze sítě a z mezipaměti jen bez signálu, takže se stará verze nezasekne. Aktuální verzi najdeš
+  v Připojení (řádek Verze aplikace). Při změně `sw.js` se číslo `VERSION` v něm zvyšuje ručně.
 - Při tréninku drží aplikace displej rozsvícený (Screen Wake Lock). Jde vypnout tlačítkem „Displej zůstane zapnutý“.
   Na starších verzích iOS v aplikaci z plochy tato funkce nemusí fungovat.
 - Přihlášení k Dropboxu na iPhonu proveď přímo v aplikaci z plochy. Safari a aplikace z plochy mají oddělené úložiště.
