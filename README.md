@@ -10,6 +10,10 @@ V jedné složce jsou dva soubory (výchozí `/ZeleznaKniha`):
 
 Klient složku nasdílí trenérovi ve svém úložišti. Trenér je ve složce host.
 
+Domácí cvičení: v záložce Cviky přepni na **Doma**, zadej vybavení (jednoručky, obouruční činka, polohovací lavice, stojan, kettlebell, gumy,
+hrazda, TRX, běžecký pás a další) a nabízejí se jen cviky, které s ním zvládneš. Generátor umí domácí rozpisy a volitelně přidá běžecký pás
+(rozcvička, chůze do kopce po tréninku, nebo samostatný den). Plán si pamatuje, jestli je pro posilovnu nebo domů.
+
 Funkce: 53 cviků na konkrétních strojích, filtr podle vybavení klubu, generátor plánů, vlastní plány,
 záznam skutečných vah a opakování, časovač pauz, graf pokroku, trenér s přístupem do sdílené složky a úpravy plánu
 (jen když klient necvičí, každá změna je označená a klient ji potvrdí).
