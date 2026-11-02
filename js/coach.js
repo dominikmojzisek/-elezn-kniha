@@ -98,6 +98,7 @@ async function enterCoach() {
     S.logs = (C.app && C.app.logs) || [];
     S.settings = Object.assign({ level: 1 }, (C.app && C.app.settings) || {});
     if (!S.settings.eq || typeof S.settings.eq !== 'object') S.settings.eq = {};
+    if (!S.settings.home || typeof S.settings.home !== 'object') S.settings.home = {};
     softRender();
   }, () => { C.loadingApp = false; });
   render();

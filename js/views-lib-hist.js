@@ -13,13 +13,16 @@ function libList() {
       <div class="muted" style="font-size:14px">${esc(e.mu)}</div>
       <div class="num" style="font-size:14px">Doporučeno ${e.s} × ${esc(e.r)} · pauza ${e.rest} s${b.w ? ' · rekord ' + b.w + ' kg' : ''}</div>
       <div class="muted" style="font-size:14px">${esc(e.tip)}</div>
-      <div class="row"><button class="btn sm" data-act="toplan" data-x="${e.id}">Přidat do plánu</button>${isAvail(e) ? '' : '<span class="tag" style="background:var(--surface2);color:var(--muted)">Chybí vybavení</span>'}</div></div>`;
+      <div class="row"><button class="btn sm" data-act="toplan" data-x="${e.id}">Přidat do plánu</button>${isAvail(e) ? '' : '<span class="tag" style="background:var(--surface2);color:var(--muted)">' + (curPlace() === 'home' && !HOME_OF[e.id] ? 'Jen v posilovně' : 'Chybí vybavení') + '</span>'}</div></div>`;
   }).join('');
 }
 function viewLib() {
   const chips = [['all', 'Vše'], ...CATS.map(c => [c.id, c.n])].map(([id, n]) => `<button class="chip" aria-pressed="${ui.cat === id}" data-act="cat" data-v="${id}">${n}</button>`).join('');
   return `<div class="top"><h1>Cviky</h1><span class="tag num">${libItems().length} cviků</span></div>
-    <div class="card row" style="justify-content:space-between"><div class="grow"><b>${esc(GYM_NAME)}</b><div class="muted" style="font-size:14px">Cviky se filtrují podle vybavení klubu.</div></div><button class="btn sm" data-act="eq">Vybavení</button></div>
+    <div class="chips" role="group" aria-label="Kde cvičíš"><button class="chip" aria-pressed="${curPlace() === 'gym'}" data-act="place" data-v="gym">Posilovna</button><button class="chip" aria-pressed="${curPlace() === 'home'}" data-act="place" data-v="home">Doma</button></div>
+    ${curPlace() === 'home'
+      ? `<div class="card row" style="justify-content:space-between"><div class="grow"><b>Domácí cvičení</b><div class="muted" style="font-size:14px">Nabízí se cviky podle vybavení, které máš doma.</div></div><button class="btn sm" data-act="heq">Vybavení</button></div>`
+      : `<div class="card row" style="justify-content:space-between"><div class="grow"><b>${esc(GYM_NAME)}</b><div class="muted" style="font-size:14px">Cviky se filtrují podle vybavení klubu.</div></div><button class="btn sm" data-act="eq">Vybavení</button></div>`}
     <div class="chips" role="group" aria-label="Kategorie">${chips}<button class="chip" aria-pressed="${!!ui.showAll}" data-act="showall">I nedostupné</button></div>
     <label class="field"><span class="lbl">Hledat cvik, stroj nebo sval</span><input id="libq" data-f="q" type="search" value="${esc(ui.q)}" placeholder="např. leg press, biceps"></label>
     <div class="stack" id="libList">${libList()}</div>`;

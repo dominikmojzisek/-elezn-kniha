@@ -1,6 +1,6 @@
 /* ===== Stav a ukládání ===== */
 const LS_KEY = 'zeleznaKniha.v1';
-let S = { plans: [], logs: [], settings: { level: 1, eq: {} }, sess: null };
+let S = { plans: [], logs: [], settings: { level: 1, eq: {}, home: {} }, sess: null };
 let ui = { tab: 'home', cat: 'all', q: '', openPlan: null, editDay: 0, hist: null, genStep: null };
 let MODE = 'client';
 let dbDoc = null, saveTimer = null, saving = false, dirty = false;
@@ -31,6 +31,7 @@ function applyData(d) {
   S.logs = Array.isArray(d.logs) ? d.logs : [];
   S.settings = Object.assign({ level: 1 }, d.settings || {});
   if (!S.settings.eq || typeof S.settings.eq !== 'object') S.settings.eq = {};
+  if (!S.settings.home || typeof S.settings.home !== 'object') S.settings.home = {};
   S.sess = d.sess || null;
 }
 function saveLocal() {
@@ -85,25 +86,33 @@ async function initCloud() {
 const exOf = id => EXMAP[id] || { id, n: 'Neznámý cvik', c: 'stred', m: '', mu: '', s: 3, r: '10', rest: 60, lvl: 1, tip: '' };
 const planItem = (id, over = {}) => { const e = exOf(id); return Object.assign({ id: uid(), x: id, s: e.s, r: e.r, rest: e.rest, w: 0 }, over); };
 const ensureIds = plans => plans.forEach(p => p.days.forEach(d => d.ex.forEach(i => { if (!i.id) i.id = uid(); })));
-const newPlan = (name, days) => ({ id: uid(), name, created: Date.now(), days: days.map(d => ({ id: uid(), t: d.t, ex: d.ex })) });
+const newPlan = (name, days, place) => ({ id: uid(), name, place: place || 'gym', created: Date.now(), days: days.map(d => ({ id: uid(), t: d.t, ex: d.ex })) });
 
 /* Generátor: z každé dvojice "a|b" vybere dostupný cvik podle úrovně; když nic z nabídky v klubu není,
    vezme jiný dostupný cvik ze stejné partie. Série a opakování upraví podle cíle. */
-function generatePlan(splitId, goalId, level) {
-  const sp = SPLITS[splitId], g = GOALS[goalId];
-  const days = sp.days.map(d => {
+function generatePlan(splitId, goalId, level, opts = {}) {
+  const sp = SPLITS[splitId], g = GOALS[goalId], place = sp.place || 'gym';
+  const specDays = sp.days.map(d => ({ t: d.t, ex: d.ex.slice() }));
+  /* běžecký pás: rozcvička před, doběh po tréninku, nebo samostatný den */
+  if (opts.cardio && opts.cardio !== 'none' && isAvail(exOf('walkinc'), place)) {
+    if (opts.cardio === 'warm') specDays.forEach(d => d.ex.unshift('treadwarm'));
+    else if (opts.cardio === 'fin') specDays.forEach(d => d.ex.push('walkinc'));
+    else if (opts.cardio === 'day') specDays.push({ t: 'Kondice na pásu', ex: ['treadwarm', 'runeasy|runint', 'walkinc'] });
+  }
+  const days = specDays.map(d => {
     const used = new Set(), out = [];
     d.ex.forEach((spec, i) => {
       const ids = spec.split('|');
-      let opts = ids.map(exOf).filter(e => isAvail(e) && !used.has(e.id));
-      if (!opts.length) {
-        const cat = exOf(ids[0]).c, pool = EX.filter(e => e.c === cat && isAvail(e) && !used.has(e.id));
-        opts = pool.filter(e => e.lvl <= level); if (!opts.length) opts = pool;
+      let opts2 = ids.map(exOf).filter(e => isAvail(e, place) && !used.has(e.id));
+      if (!opts2.length) {
+        const cat = exOf(ids[0]).c, pool = EX.filter(e => e.c === cat && isAvail(e, place) && !used.has(e.id));
+        opts2 = pool.filter(e => e.lvl <= level); if (!opts2.length) opts2 = pool;
       }
-      if (!opts.length) return;
-      opts.sort((a, b) => Math.abs(a.lvl - level) - Math.abs(b.lvl - level));
-      const e = opts[0]; used.add(e.id);
-      const compound = i < 2 && e.c !== 'stred';
+      if (!opts2.length) return;
+      opts2.sort((a, b) => Math.abs(a.lvl - level) - Math.abs(b.lvl - level));
+      const e = opts2[0]; used.add(e.id);
+      if (e.c === 'kondice') { out.push(planItem(e.id)); return; }
+      const compound = out.filter(x => exOf(x.x).c !== 'kondice').length < 2 && e.c !== 'stred';
       const sets = Math.max(2, Math.min(5, e.s + g.setAdd));
       const reps = /[a-zA-Z\/]/.test(e.r) ? e.r : (compound ? g.main : g.iso);
       out.push(planItem(e.id, { s: level === 1 ? Math.min(sets, 3) : sets, r: reps, rest: Math.round(e.rest * g.restMul / 15) * 15 }));
@@ -111,7 +120,7 @@ function generatePlan(splitId, goalId, level) {
     return { t: d.t, ex: out };
   }).filter(d => d.ex.length);
   if (!days.length) days.push({ t: 'Den 1', ex: [] });
-  return newPlan(sp.n + ' · ' + g.n, days);
+  return newPlan(sp.n + ' · ' + g.n, days, place);
 }
 
 /* Poslední zaznamenaná váha a nejlepší série pro cvik */

@@ -7,13 +7,26 @@ function askDlg(msg, act, attrs = '') {
 }
 const sel = (id, opts) => `<label class="field"><span class="lbl">${opts.l}</span><select id="${id}">${opts.o.map(([v, n]) => `<option value="${v}"${v == opts.v ? ' selected' : ''}>${n}</option>`).join('')}</select></label>`;
 
-function genDialog() {
+function genDialog(place, keep = {}) {
+  place = place || curPlace();
+  const splits = Object.entries(SPLITS).filter(([k, v]) => (v.place || 'gym') === place).map(([k, v]) => [k, v.n]);
+  const treadOk = isAvail(exOf('walkinc'), place);
   openDlg(`<h2>Vygenerovat plán</h2>
-    ${sel('g-split', { l: 'Rozpis', o: Object.entries(SPLITS).map(([k, v]) => [k, v.n]), v: 'ul4' })}
-    ${sel('g-goal', { l: 'Cíl', o: Object.entries(GOALS).map(([k, v]) => [k, v.n]), v: 'objem' })}
-    ${sel('g-lvl', { l: 'Zkušenost', o: [[1, 'Začátečník (stroje, 3 série)'], [2, 'Pokročilý'], [3, 'Zkušený (volné činky)']], v: S.settings.level || 1 })}
+    ${sel('g-place', { l: 'Kde cvičíš', o: [['gym', 'V posilovně'], ['home', 'Doma']], v: place })}
+    ${sel('g-split', { l: 'Rozpis', o: splits, v: keep.split || splits[0][0] })}
+    ${sel('g-goal', { l: 'Cíl', o: Object.entries(GOALS).map(([k, v]) => [k, v.n]), v: keep.goal || 'objem' })}
+    ${sel('g-lvl', { l: 'Zkušenost', o: place === 'home' ? [[1, 'Začátečník'], [2, 'Pokročilý'], [3, 'Zkušený']] : [[1, 'Začátečník (stroje, 3 série)'], [2, 'Pokročilý'], [3, 'Zkušený (volné činky)']], v: keep.lvl || S.settings.level || 1 })}
+    ${treadOk ? sel('g-cardio', { l: 'Běžecký pás', o: [['none', 'Bez pásu'], ['warm', 'Rozcvička 5-10 min před tréninkem'], ['fin', 'Chůze do kopce po tréninku'], ['day', 'Samostatný den na pásu']], v: keep.cardio || 'none' }) : ''}
+    ${place === 'home' && !Object.values(S.settings.home || {}).some(Boolean) ? '<p class="muted" style="margin:0;font-size:14px">Zatím nemáš zadané domácí vybavení, plán bude jen s vlastní vahou. Vybavení zadáš v záložce Cviky po přepnutí na Doma.</p>' : ''}
     <p class="muted" style="margin:0;font-size:14px">Plán pak můžeš upravit: přidat, odebrat nebo přesunout cviky, změnit série, opakování a pauzy.</p>
     <div class="row"><button class="btn pri grow" data-act="dogen">Vytvořit plán</button><button class="btn" data-act="close">Zrušit</button></div>`);
+}
+function homeDialog() {
+  const h = S.settings.home;
+  const groups = HOMELIST.map(g => `<div class="stack"><div class="lbl">${g.g}</div>` + g.items.map(([t, n]) =>
+    `<label class="pickitem" style="cursor:pointer"><span><b>${esc(n)}</b></span><input type="checkbox" data-heq="${t}" ${h[t] === true ? 'checked' : ''} style="width:24px;height:24px"></label>`).join('') + '</div>').join('');
+  openDlg(`<h2>Vybavení doma</h2><p class="muted" style="margin:0;font-size:14px">Zaškrtni, co doma máš. Nabídka cviků a generátor plánů se přizpůsobí. Podložka se počítá vždy.</p>
+    <div class="row"><button class="btn sm" data-act="heoff">Nic nemám</button></div>${groups}<button class="btn pri" data-act="close">Hotovo</button>`);
 }
 function eqDialog() {
   const eq = S.settings.eq;
@@ -25,7 +38,8 @@ function eqDialog() {
 let pc = 'all', pq = '', pickMode = 'day', pickX = null;
 function pickList() {
   const q = pq.trim().toLowerCase();
-  const items = EX.filter(e => isAvail(e) && (pc === 'all' || e.c === pc) && (!q || (e.n + ' ' + e.m + ' ' + e.mu).toLowerCase().includes(q)));
+  const pl = curPlan(), place = (pl && pl.place) || 'gym';
+  const items = EX.filter(e => isAvail(e, place) && (pc === 'all' || e.c === pc) && (!q || (e.n + ' ' + e.m + ' ' + e.mu).toLowerCase().includes(q)));
   return items.map(e => `<button class="pickitem" data-act="addex" data-x="${e.id}"><span><b>${esc(e.n)}</b><em>${esc(e.m)}</em></span><span class="tag">${esc(CATMAP[e.c])}</span></button>`).join('') || '<p class="muted">Nic nenalezeno.</p>';
 }
 function pickDialog() {
@@ -48,6 +62,9 @@ const curDay = () => { const p = curPlan(); return p && p.days[ui.editDay]; };
 const ACTIONS = {
   awake: () => { S.settings.keepAwake = (S.settings.keepAwake === false); if (S.settings.keepAwake) holdScreen(); else releaseScreen(); persist(); render(); },
   eq: () => eqDialog(),
+  heq: () => homeDialog(),
+  heoff: () => { S.settings.home = {}; persist(); homeDialog(); if (ui.tab === 'lib') render(); },
+  place: el => { S.settings.place = el.dataset.v; persist(); render(); },
   eqall: () => { S.settings.eq = {}; persist(); eqDialog(); },
   eqfree: () => { const m = {}; EQLIST.forEach(g => g.items.forEach(([t]) => m[t] = ['db', 'bb', 'kb', 'trx', 'sled', 'med', 'box', 'bands', 'glute'].includes(t))); S.settings.eq = m; persist(); eqDialog(); },
   showall: () => { ui.showAll = !ui.showAll; render(); },
@@ -56,12 +73,13 @@ const ACTIONS = {
   gen: () => genDialog(),
   dogen: () => {
     const lvl = +$('#g-lvl').value; S.settings.level = lvl;
-    const p = generatePlan($('#g-split').value, $('#g-goal').value, lvl);
+    const cd = $('#g-cardio');
+    const p = generatePlan($('#g-split').value, $('#g-goal').value, lvl, { cardio: cd ? cd.value : 'none' });
     S.plans.unshift(p); ui.tab = 'plans'; ui.openPlan = p.id; ui.editDay = 0;
     closeDlg(); persist(); render(); scrollTo(0, 0); toast('Plán vytvořen');
   },
   newplan: () => {
-    const p = newPlan('Můj plán', [{ t: 'Den 1', ex: [] }]);
+    const p = newPlan('Můj plán', [{ t: 'Den 1', ex: [] }], curPlace());
     S.plans.unshift(p); ui.tab = 'plans'; ui.openPlan = p.id; ui.editDay = 0; persist(); render(); scrollTo(0, 0);
   },
   openplan: el => { ui.openPlan = el.dataset.p; ui.editDay = 0; render(); scrollTo(0, 0); },
@@ -98,7 +116,7 @@ const ACTIONS = {
     closeDlg(); persist(); toast('Přidáno do plánu ' + p.name);
   },
   addtonew: () => {
-    const p = newPlan('Můj plán', [{ t: 'Den 1', ex: [planItem(pickX)] }]);
+    const p = newPlan('Můj plán', [{ t: 'Den 1', ex: [planItem(pickX)] }], curPlace());
     S.plans.unshift(p); closeDlg(); persist(); toast('Vytvořen nový plán');
   },
   start: el => { if (S.sess) { toast('Nejdřív dokonči rozpracovaný trénink'); ui.tab = 'home'; render(); return; } startSession(el.dataset.p, +el.dataset.d); scrollTo(0, 0); },
@@ -148,6 +166,11 @@ document.addEventListener('input', ev => {
 document.addEventListener('change', ev => {
   if (ev.target.id === 'impfile') { importFile(ev.target); return; }
   if (ev.target.id === 's-prov') { applyProvVisibility(ev.target.value); return; }
+  if (ev.target.id === 'g-place') {
+    const v = id => { const x = $('#' + id); return x ? x.value : undefined; };
+    genDialog(ev.target.value, { goal: v('g-goal'), lvl: v('g-lvl') }); return;
+  }
+  if (ev.target.dataset.heq) { S.settings.home[ev.target.dataset.heq] = ev.target.checked; persist(); if (ui.tab === 'lib') render(); return; }
   if (ev.target.dataset.eq) { S.settings.eq[ev.target.dataset.eq] = ev.target.checked; persist(); if (ui.tab === 'lib') render(); return; }
   if (ev.target.dataset.f === 'histex') { ui.histEx = ev.target.value; render(); }
   if (ev.target.dataset.f === 'cex') { ui.cex = ev.target.value; render(); }
