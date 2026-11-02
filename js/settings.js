@@ -1,4 +1,5 @@
 /* ===== Připojení k úložišti, export a import ===== */
+const APP_VER = '2026-11-02 domácí cvičení';
 const normPath = (v, def) => { v = (v || '').trim() || def; return v[0] === '/' ? v : '/' + v; };
 
 function connHint() {
@@ -35,6 +36,7 @@ function settingsDialog() {
     </div>
     <div class="stack" data-prov="manual"><div class="muted" style="font-size:14px">Data zůstávají v tomto prohlížeči. Zálohu a přenos mezi klientem a trenérem děláš soubory níže, které můžeš uložit třeba do iCloud Drive nebo poslat zprávou.</div></div>
     <div class="row"><button class="btn pri grow" data-act="setsave">Uložit a připojit</button><button class="btn" data-act="close">Zavřít</button></div>
+    <div class="muted" style="font-size:13px">Verze aplikace: ${APP_VER}</div>
     <div class="lbl">Soubory</div>
     <div class="row"><button class="btn sm" data-act="exportf" data-n="app">Export deníku</button><button class="btn sm" data-act="importf" data-n="app">Import deníku</button></div>
     <div class="row"><button class="btn sm" data-act="exportf" data-n="plans">Export plánů</button><button class="btn sm" data-act="importf" data-n="plans">Import plánů</button></div>`);
