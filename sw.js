@@ -2,7 +2,7 @@
    Všechny soubory aplikace se uloží při instalaci pod jednou verzí, takže se nikdy nemíchají staré a nové.
    Číslo verze se mění ručně při každé úpravě. Soubory aplikace se berou primárně ze sítě a z mezipaměti jen bez signálu,
    takže se stará verze nemůže zasekat. */
-const VERSION = 'v7-doma';
+const VERSION = 'v8-doma';
 const CACHE = 'zk-' + VERSION, FONTS = 'zk-fonts';
 const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon.svg',
   'js/data.js', 'js/equipment.js', 'js/storage.js', 'js/core.js', 'js/views-home.js', 'js/views-plans.js',
