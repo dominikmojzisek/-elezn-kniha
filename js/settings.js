@@ -1,5 +1,5 @@
 /* ===== Připojení k úložišti, export a import ===== */
-const APP_VER = '2026-11-02 domácí cvičení';
+const APP_VER = '2026-11-07 více domácích cviků';
 const normPath = (v, def) => { v = (v || '').trim() || def; return v[0] === '/' ? v : '/' + v; };
 
 function connHint() {

@@ -96,19 +96,7 @@ CATMAP.kondice = 'Kondice a pás';
 ].forEach(e => { EX.push(e); EXMAP[e.id] = e; });
 
 /* Domácí rozpisy; cvik se vybere podle zaškrtnutého vybavení, jinak se vezme jiný dostupný cvik stejné partie */
-Object.assign(SPLITS, {
-  hfb3: { n: 'Celé tělo doma 3×', place: 'home', days: [
-    { t: 'Celé tělo A', ex: ['squat|goblet|bodysq', 'bench|dbpress|pushup', 'pullup|dbrow|bandpd', 'dbohp|dbsh', 'gluteb|hipth', 'plank'] },
-    { t: 'Celé tělo B', ex: ['rdl|lunge', 'incdb|dbpress|pushup', 'bentbb|dbrow|bandrow', 'latr|dbohp', 'bulg|lunge|bodysq', 'crunch|deadbug'] },
-    { t: 'Celé tělo C', ex: ['goblet|squat|bodysq', 'dbfly|pushup', 'dbrow|bandrow|bentbb', 'rfly|bandfp', 'kbswing|gluteb', 'dbcurl', 'dbtri|benchdip'] }
-  ] },
-  hul4: { n: 'Horní / dolní doma 4×', place: 'home', days: [
-    { t: 'Horní tělo A', ex: ['bench|dbpress|pushup', 'pullup|dbrow|bandpd', 'dbohp|dbsh', 'dbcurl', 'dbtri|benchdip', 'plank'] },
-    { t: 'Dolní tělo A', ex: ['squat|goblet|bodysq', 'rdl|gluteb', 'lunge|bulg', 'hcalf', 'crunch|abwheel|deadbug'] },
-    { t: 'Horní tělo B', ex: ['incdb|dbfly|pushup', 'bentbb|dbrow|bandrow', 'latr|dbohp', 'rfly|bandfp', 'dbcurl', 'bandtri|benchdip'] },
-    { t: 'Dolní tělo B', ex: ['kbswing|hipth|gluteb', 'bulg|lunge|boxup', 'rdl|ballcurl', 'hcalf', 'sideplank|deadbug'] }
-  ] }
-});
+/* (domácí rozpisy jsou níže v bloku Další domácí cviky) */
 
 /* Dostupnost cviku. Klub: co není výslovně vypnuté, platí za dostupné. Doma: musí být zaškrtnuté všechno potřebné. */
 const curPlace = () => (typeof S === 'object' && S.settings && S.settings.place) || 'gym';
@@ -123,3 +111,96 @@ function isAvail(e, place) {
   const eq = st.eq || {};
   return (EQ_OF[e.id] || []).every(t => eq[t] !== false);
 }
+
+/* ===== Další domácí cviky ===== */
+const HOME_NEW = [
+  // [id, kat, název, vybavení (text), svaly, série, opak., pauza, lvl, tip, požadavky doma]
+  ['pushdecl','hrudnik','Kliky s nohama výš','Lavice nebo bedna','Horní prsa, ramena',3,'8-12',60,2,'Nohy na lavici, tělo v přímce. Čím výš nohy, tím těžší.',['bench|box']],
+  ['pushinc','hrudnik','Kliky s rukama na lavici','Lavice nebo bedna','Prsa, triceps',3,'10-15',60,1,'Lehčí varianta kliků, vhodná na začátek.',['bench|box']],
+  ['pushdiam','hrudnik','Diamantové kliky','Podložka','Triceps, vnitřní prsa',3,'6-12',60,2,'Ruce pod hrudníkem do tvaru diamantu, lokty u těla.',[]],
+  ['bandpress','hrudnik','Tlak s gumou na hrudník','Posilovací guma','Prsa, triceps',3,'12-15',60,1,'Gumu veď za zády, tlač před sebe a na konci stáhni prsa.',['bands']],
+  ['dbsqueeze','hrudnik','Stisk jednoručky na hrudi','Jednoručky','Vnitřní prsa',3,'12-15',60,1,'Dvě jednoručky tiskni k sobě po celou dobu tlaku.',['db']],
+  ['bbfloor','hrudnik','Tlak s činkou na podlaze','Obouruční činka','Prsa, triceps',3,'6-10',90,2,'Lokty se dole dotknou podlahy. Bezpečné bez stojanu.',['bb']],
+  ['trxpush','hrudnik','Kliky na TRX','Závěsný systém','Prsa, střed těla',3,'8-12',60,2,'Čím šikměji stojíš, tím těžší cvik.',['trx']],
+  ['dbpull','zada','Pullover s jednoručkou','Jednoručka','Široký sval zádový, prsa',3,'10-12',60,2,'Paže mírně pokrčené, oblouk za hlavu bez záklonu.',['db']],
+  ['dbrow2','zada','Veslování se dvěma jednoručkami','Jednoručky','Střed zad',3,'8-12',75,2,'Předklon s rovnými zády, lokty táhni k bokům.',['db']],
+  ['chin','zada','Shyby podhmatem','Hrazda','Záda, biceps',3,'4-8',120,2,'Dlaně k sobě, brada nad hrazdu.',['pullbar']],
+  ['hang','zada','Vis na hrazdě','Hrazda','Předloktí, úchop, ramena',3,'20-40 s',60,1,'Lopatky aktivně stáhni dolů, nehoupej se.',['pullbar']],
+  ['supm','zada','Superman','Podložka','Bedra, zadek',3,'12-15',45,1,'Zvedej paže i nohy najednou, nahoře krátce zadrž.',[]],
+  ['dbdead','zada','Mrtvý tah s jednoručkami','Jednoručky','Záda, zadek, hamstringy',3,'8-12',90,1,'Záda rovná, jednoručky vedeš těsně u nohou.',['db']],
+  ['kbrow','zada','Veslování s kettlebellem','Kettlebell','Střed zad',3,'8-12 / ruka',75,1,'Opři se druhou rukou o lavici, loket táhni k boku.',['kb']],
+  ['trxy','zada','TRX Y-zdvih','Závěsný systém','Zadní ramena, trapézy',3,'10-12',45,1,'Paže tvoří písmeno Y, lopatky stahuj dolů.',['trx']],
+  ['revlunge','nohy','Výpady vzad','Bez vybavení','Kvadricepsy, zadek',3,'10 / noha',60,1,'Krok dozadu, kolena kontroluj, trup vzpřímený.',[]],
+  ['splitsq','nohy','Dřep na jedné noze k lavici','Lavice nebo bedna','Kvadricepsy, zadek',3,'6-10 / noha',75,2,'Sedni na lavici a vstaň bez rozhoupání.',['bench|box']],
+  ['stepdb','nohy','Výstupy na bednu s jednoručkami','Bedna + jednoručky','Kvadricepsy, zadek',3,'8-12 / noha',75,2,'Tlač stojnou nohou, druhou nepomáhej.',['box','db']],
+  ['sumo','nohy','Sumo dřep se závažím','Kettlebell nebo jednoručka','Přitahovače, zadek',3,'10-15',60,1,'Široký postoj, špičky ven, závaží drž mezi nohama.',['kb|db']],
+  ['frontsq','nohy','Čelní dřep','Obouruční činka + stojan','Kvadricepsy, střed těla',4,'5-8',120,3,'Lokty vysoko, činka leží na předních ramenou.',['bb','rack']],
+  ['sglb','nohy','Zvedání pánve na jedné noze','Podložka','Zadek, hamstringy',3,'8-12 / noha',45,2,'Pánev drž v rovině, nahoře stáhni zadek.',[]],
+  ['wallsit','nohy','Výdrž v sedu u zdi','Zeď','Kvadricepsy',3,'30-60 s',45,1,'Stehna rovnoběžně s podlahou, záda opřená.',[]],
+  ['jumpsq','nohy','Výskoky z dřepu','Bez vybavení','Nohy, výbušnost',3,'8-12',60,2,'Měkce dopadni a hned jdi do dalšího dřepu.',[]],
+  ['sldl','nohy','Rumunský tah na jedné noze','Jednoručka nebo kettlebell','Hamstringy, zadek',3,'8-10 / noha',75,2,'Boky táhni dozadu, záda rovná, jako stoj na jedné noze.',['db|kb']],
+  ['dbsqz','nohy','Dřep s jednoručkami','Jednoručky','Kvadricepsy, zadek',3,'10-12',75,1,'Jednoručky drž u ramen nebo podél těla.',['db']],
+  ['bandsq','nohy','Dřep s gumou kolem kolen','Posilovací guma','Zadek, kvadricepsy',3,'12-15',60,1,'Kolena tlač do stran proti gumě.',['bands']],
+  ['bandwalk','nohy','Chůze do stran s gumou','Posilovací guma','Zadek (boční)',3,'12 / strana',45,1,'Mírný dřep, krok do strany, guma ať je stále napnutá.',['bands']],
+  ['hamslide','nohy','Zakopávání na ručníku','Ručník nebo kluzák, podložka','Hamstringy, zadek',3,'8-12',60,2,'Z můstku přitahuj paty po hladké podlaze.',[]],
+  ['calfdb','nohy','Výpony s jednoručkami','Jednoručky','Lýtka',3,'12-20',45,1,'Dole plné protažení, nahoře pauza.',['db']],
+  ['pike','ramena','Kliky v pozici V','Podložka','Ramena, triceps',3,'6-12',60,2,'Boky vysoko, hlava míří mezi paže.',[]],
+  ['dbfront','ramena','Předpažení s jednoručkami','Jednoručky','Přední ramena',3,'10-15',45,1,'Zvedej do výšky ramen, bez houpání.',['db']],
+  ['arnold','ramena','Arnoldův tlak','Jednoručky','Ramena',3,'8-12',75,2,'Při tlaku otáčej dlaně od sebe.',['db']],
+  ['bandohp','ramena','Tlak s gumou nad hlavu','Posilovací guma','Ramena, triceps',3,'12-15',60,1,'Stoj na gumě a tlač nad hlavu, břicho zpevněné.',['bands']],
+  ['bandlat','ramena','Upažování s gumou','Posilovací guma','Střední ramena',3,'12-20',45,1,'Veď lokty, výše než ramena nezvedej.',['bands']],
+  ['bandpull','ramena','Rozpažování s gumou','Posilovací guma','Zadní ramena, střed zad',3,'15-20',45,1,'Gumu natahuj před sebou do stran, lopatky stahuj.',['bands']],
+  ['kbpress','ramena','Tlak s kettlebellem','Kettlebell','Ramena, triceps',3,'8-10 / ruka',75,1,'Kettlebell drž u ramene, zápěstí rovně.',['kb']],
+  ['dbconc','paze','Koncentrovaný zdvih','Jednoručka','Biceps',3,'10-12 / ruka',45,1,'Loket opři o stehno a zvedej pomalu.',['db']],
+  ['bandcurl','paze','Biceps s gumou','Posilovací guma','Biceps',3,'12-20',45,1,'Stoj na gumě, lokty u těla.',['bands']],
+  ['dbext','paze','Triceps v předklonu (kickback)','Jednoručka','Triceps',3,'12-15 / ruka',45,1,'Loket drž u těla, propni paži dozadu.',['db']],
+  ['closepu','paze','Kliky úzkým úchopem','Podložka','Triceps, prsa',3,'8-15',60,1,'Lokty těsně u žeber.',[]],
+  ['bbcurl2','paze','Bicepsový zdvih s činkou','Obouruční činka','Biceps',3,'8-12',60,1,'Záda rovná, bez houpání.',['bb']],
+  ['skull','paze','Tricepsový tlak vleže s činkou','Činka + lavice','Triceps',3,'8-12',75,2,'Lokty míří ke stropu, spouštěj k čelu.',['bb','bench']],
+  ['legraise','stred','Zvedání nohou vleže','Podložka','Spodní břicho',3,'10-15',45,1,'Bedra přitiskni k zemi, nohy spouštěj pomalu.',[]],
+  ['bicycle','stred','Kolo (bicycle crunch)','Podložka','Šikmé břišní',3,'20 celkem',45,1,'Protilehlý loket a koleno, bez škubání krkem.',[]],
+  ['mtn','stred','Horolezec','Podložka','Břicho, kondice',3,'20-30 s',45,1,'Boky v úrovni ramen, střídej kolena rychle.',[]],
+  ['hollow','stred','Hollow hold','Podložka','Přímý sval břišní',3,'20-40 s',45,2,'Bedra přitisknutá k zemi, paže a nohy nad zemí.',[]],
+  ['bird','stred','Bird dog','Podložka','Střed těla, bedra',3,'10 / strana',45,1,'Natahuj protilehlou ruku a nohu, trup nehybný.',[]],
+  ['ballroll','stred','Plank na míči','Gymnastický míč','Hluboký stabilizační systém',3,'30-45 s',45,2,'Předloktí na míči, tělo v přímce.',['fitball']],
+  ['ballcr','stred','Zkracovačky na míči','Gymnastický míč','Přímý sval břišní',3,'12-20',45,1,'Míč pod bedry, zakulacuj trup.',['fitball']],
+  ['plankt','stred','Plank s dotykem ramen','Podložka','Střed těla, ramena',3,'20 celkem',45,1,'Boky nekývej, střídej ruce.',[]],
+  ['pallof','stred','Pallof press s gumou','Posilovací guma','Šikmé břišní, stabilita',3,'10 / strana',45,1,'Guma tahá do strany, ty tlač před sebe a nepřetáčej se.',['bands']],
+  ['bandchop','stred','Seknutí s gumou','Posilovací guma','Šikmé břišní',3,'12 / strana',45,1,'Diagonálně shora dolů, otáčej trup.',['bands']],
+  ['kbcarry','stred','Nošení závaží','Kettlebell nebo jednoručky','Úchop, střed těla, trapézy',3,'20-30 m',60,1,'Vzpřímeně, ramena dolů, drobné kroky.',['kb|db']],
+  ['burpee','kondice','Burpees','Bez vybavení','Celé tělo, kondice',4,'8-10',60,2,'Klik, výskok, plynule. Kdo nezvládne klik, vynechá ho.',[]],
+  ['jj','kondice','Jumping jacks','Bez vybavení','Kondice, lýtka',3,'40 s',30,1,'Zahřátí nebo kondice mezi silovými cviky.',[]],
+  ['hknees','kondice','Zvedání kolen na místě','Bez vybavení','Kondice, nohy',3,'40 s',30,1,'Kolena do výšky pasu, rychle a lehce.',[]],
+  ['treadwalk','kondice','Svižná chůze na pásu','Běžecký pás','Kondice',1,'30-45 min',30,1,'Tempo, při kterém se mírně zadýcháš.',['tread']],
+  ['treadhill','kondice','Intervaly do kopce na pásu','Běžecký pás','Nohy, kondice',5,'2 min',90,2,'2 minuty ve sklonu 8-10 %, pak chůze v rovině.',['tread']],
+  ['treadsp','kondice','Sprinty na pásu','Běžecký pás','Kondice, rychlost',8,'20 s rychle',60,3,'Jen s dobrou kondicí. Držadla nepoužívej, drž se kraje pásu.',['tread']]
+];
+HOME_NEW.forEach(([id, c, n, m, mu, s, r, rest, lvl, tip, req]) => {
+  const e = { id, c, n, m, mu, s, r, rest, lvl, tip };
+  EX.push(e); EXMAP[id] = e; HOME_OF[id] = req;
+  if (!EQ_OF[id]) EQ_OF[id] = req.filter(t => !t.includes('|'));
+});
+
+Object.assign(SPLITS, {
+  hfb3: { n: 'Celé tělo doma 3×', place: 'home', days: [
+    { t: 'Celé tělo A', ex: ['squat|goblet|dbsqz|bodysq', 'bench|dbpress|pushup', 'pullup|chin|dbrow|bandpd|supm', 'dbohp|kbpress|dbsh|pike', 'gluteb|hipth', 'plank|hollow'] },
+    { t: 'Celé tělo B', ex: ['rdl|dbdead|sldl|hamslide', 'incdb|dbpress|pushdecl|pushup', 'bentbb|dbrow2|dbrow|bandrow', 'latr|dbfront|bandlat', 'bulg|lunge|revlunge', 'crunch|legraise|bicycle'] },
+    { t: 'Celé tělo C', ex: ['goblet|sumo|squat|bodysq', 'dbfly|dbsqueeze|pushdiam|pushup', 'dbrow|kbrow|bandrow|supm', 'rfly|bandpull|bandfp', 'kbswing|sglb|gluteb', 'dbcurl|bandcurl', 'dbtri|benchdip|closepu', 'pallof|deadbug|bird'] }
+  ] },
+  hul4: { n: 'Horní / dolní doma 4×', place: 'home', days: [
+    { t: 'Horní tělo A', ex: ['bench|dbpress|pushup', 'pullup|chin|dbrow|bandpd', 'dbohp|kbpress|dbsh|pike', 'dbcurl|bandcurl', 'dbtri|benchdip|closepu', 'plank|hollow'] },
+    { t: 'Dolní tělo A', ex: ['squat|goblet|dbsqz|bodysq', 'rdl|dbdead|gluteb', 'lunge|bulg|revlunge', 'hcalf|calfdb', 'crunch|abwheel|legraise'] },
+    { t: 'Horní tělo B', ex: ['incdb|dbfly|pushdecl|pushup', 'bentbb|dbrow2|dbrow|bandrow', 'latr|bandlat|dbfront', 'rfly|bandpull|bandfp', 'dbconc|dbcurl', 'bandtri|dbext|benchdip'] },
+    { t: 'Dolní tělo B', ex: ['kbswing|hipth|sglb|gluteb', 'bulg|stepdb|splitsq|lunge|boxup', 'rdl|ballcurl|hamslide|sldl', 'hcalf|calfdb', 'sideplank|deadbug|bird'] }
+  ] },
+  hppl3: { n: 'Push / Pull / Legs doma 3×', place: 'home', days: [
+    { t: 'Push (tlaky)', ex: ['bench|dbpress|pushup', 'incdb|pushdecl|pushdiam|dbfly', 'dbohp|kbpress|arnold|pike', 'latr|bandlat|dbfront', 'dbtri|benchdip|closepu', 'bandtri|dbext'] },
+    { t: 'Pull (tahy)', ex: ['pullup|chin|dbrow|bandpd', 'bentbb|dbrow2|kbrow|bandrow', 'dbdead|supm', 'rfly|bandpull|bandfp', 'dbcurl|bbcurl2|bandcurl', 'dbconc|hang'] },
+    { t: 'Nohy', ex: ['squat|frontsq|goblet|dbsqz|bodysq', 'rdl|sldl|hamslide|gluteb', 'bulg|lunge|stepdb|revlunge', 'sumo|bandsq|wallsit', 'hcalf|calfdb', 'crunch|legraise|mtn'] }
+  ] },
+  hbody3: { n: 'Vlastní váha a gumy 3×', place: 'home', days: [
+    { t: 'Den A', ex: ['bodysq|jumpsq|wallsit', 'pushup|pushdiam|bandpress', 'bandrow|bandpd|supm', 'pike|bandohp', 'gluteb|sglb', 'plank|hollow'] },
+    { t: 'Den B', ex: ['revlunge|bandsq', 'pushinc|pushup|closepu', 'bandrow|supm', 'bandlat|bandpull', 'hamslide|sglb|gluteb', 'bicycle|legraise'] },
+    { t: 'Den C', ex: ['sumo|bodysq|bandwalk', 'pushdecl|pushdiam|pike', 'bandpull|bandfp|supm', 'bandcurl|bandtri', 'hcalf', 'mtn|deadbug|bird', 'burpee|jj'] }
+  ] }
+});
