@@ -14,6 +14,30 @@ Domácí cvičení: v záložce Cviky přepni na **Doma**, zadej vybavení (jedn
 hrazda, TRX, běžecký pás a další) a nabízejí se jen cviky, které s ním zvládneš. Generátor umí domácí rozpisy a volitelně přidá běžecký pás
 (rozcvička, chůze do kopce po tréninku, nebo samostatný den). Plán si pamatuje, jestli je pro posilovnu nebo domů.
 
+Vývoj zátěže: v Deníku je u každého cviku graf (nejvyšší váha, odhad maxima, objem, opakování), změna za 4 týdny a přehled všech cviků.
+Aplikace doporučuje váhu na příští trénink metodou dvojité progrese: nejdřív přidáváš opakování v rozsahu z plánu, po dosažení horní
+hranice ve všech sériích se váha zvedne (jednoručky po 1 až 2 kg, ostatní po 1 / 2,5 / 5 kg podle zátěže). Dvakrát pod rozsahem nebo tři
+tréninky bez posunu znamenají ubrat 10 %. Doporučení se předvyplní do tréninku; váha zadaná trenérem má přednost.
+
+Další funkce:
+
+- **Záloha:** v Připojení tlačítko Zálohovat vše (jeden soubor s deníkem, plány, vlastními cviky a nastavením) a Obnovit ze zálohy.
+  Bez připojeného cloudu aplikace po pěti trénincích připomene zálohu.
+- **Moje závaží** (Plány nebo Cviky): osa, kotouče, jednoručky, kettlebelly a krok strojů zvlášť pro posilovnu a domov.
+  Doporučené váhy se zaokrouhlují na to, co máš. Hodnoty se oddělují mezerou, desetinná čárka je povolená.
+- **Kotouče a rozcvičení:** u cviků s obouruční činkou trénink ukáže, co naložit na každou stranu, a u prvního cviku partie
+  navrhne rozcvičovací série (50, 70 a 85 % pracovní váhy).
+- **Pocit a poznámka:** po tréninku zvolíš pocit (lehké až na hraně) a můžeš připsat poznámku. Po tréninku na hraně se váha nezvedá,
+  po lehkém se zvedne dřív.
+- **Supersérie:** v editoru plánu spojíš cvik s následujícím. Pauza se pak spustí až po posledním cviku skupiny.
+- **Zvuk na konci pauzy:** tři pípnutí, jde vypnout v tréninku. Na iPhonu hraje jen s vypnutým tichým režimem a s aplikací na popředí.
+- **Rekordy:** upozornění při překonání nejvyšší váhy a seznam posledních rekordů v Deníku.
+- **Týdenní přehled:** série za 7 dní podle partií s porovnáním proti předchozímu týdnu.
+- **Vlastní cviky:** v záložce Cviky tlačítko + Vlastní cvik. Ukládají se do nastavení, vidí je i trenér.
+- **Kopie plánu a dne.**
+- **Komentář trenéra k tréninku:** trenér ho píše v reportu u odcvičeného tréninku, ukládá se do `plans.json`.
+  Klient ho uvidí v hlášení na úvodní obrazovce a v Deníku u daného tréninku.
+
 Funkce: 142 cviků (z toho 108 použitelných doma), filtr podle vybavení klubu, generátor plánů, vlastní plány,
 záznam skutečných vah a opakování, časovač pauz, graf pokroku, trenér s přístupem do sdílené složky a úpravy plánu
 (jen když klient necvičí, každá změna je označená a klient ji potvrdí).
@@ -115,7 +139,8 @@ js/equipment.js   vybavení klubu a závislosti cviků
 js/storage.js     úložiště: Dropbox, WebDAV, ruční režim
 js/core.js        stav, ukládání, generátor plánů, průběh tréninku
 js/views-*.js     obrazovky (Dnes, Plány, Cviky, Deník)
-js/coach.js       sdílená složka, trenérský pohled, změny
+js/extras.js      závaží, kotouče, zvuk, rekordy, týdenní přehled, vlastní cviky, kopie, záloha
+  coach.js       sdílená složka, trenérský pohled, změny
 js/settings.js    Připojení, export a import
 js/events.js      události a start aplikace
 ```
