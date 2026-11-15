@@ -1,7 +1,17 @@
 /* ===== Dialogy ===== */
 let dlg;
-function openDlg(html) { dlg.innerHTML = `<div class="dlg">${html}</div>`; if (!dlg.open) dlg.showModal(); }
-function closeDlg() { if (dlg.open) dlg.close(); }
+/* Při otevřeném dialogu se stránka pod ním zamkne, aby se posouval jen obsah dialogu (hlavně na iPhonu). */
+let lockY = null;
+function lockPage() { if (lockY !== null) return; lockY = window.scrollY || 0; document.body.style.top = -lockY + 'px'; document.body.classList.add('lock'); }
+function unlockPage() { if (lockY === null) return; const y = lockY; lockY = null; document.body.classList.remove('lock'); document.body.style.top = ''; window.scrollTo(0, y); }
+function openDlg(html) {
+  const box = dlg.querySelector('.dlg'), keep = box ? box.scrollTop : 0, same = dlg.open;
+  dlg.innerHTML = `<div class="dlg">${html}</div>`;
+  if (!dlg.open) { lockPage(); dlg.showModal(); }
+  else if (same) { const nb = dlg.querySelector('.dlg'); if (nb && dlg.dataset.kind === html.slice(0, 40)) nb.scrollTop = keep; }
+  dlg.dataset.kind = html.slice(0, 40);
+}
+function closeDlg() { if (dlg.open) dlg.close(); unlockPage(); }
 function askDlg(msg, act, attrs = '') {
   openDlg(`<h3>${esc(msg)}</h3><div class="row"><button class="btn bad grow" data-act="${act}" ${attrs}>Ano</button><button class="btn grow" data-act="close">Zrušit</button></div>`);
 }
@@ -195,6 +205,7 @@ document.addEventListener('change', ev => {
 
 /* ===== Start ===== */
 dlg = document.createElement('dialog'); dlg.setAttribute('aria-label', 'Dialog'); document.body.appendChild(dlg);
+dlg.addEventListener('close', unlockPage);
 loadLocal();
 if (S.sess) startTick();
 render();

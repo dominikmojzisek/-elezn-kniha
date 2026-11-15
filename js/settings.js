@@ -1,5 +1,5 @@
 /* ===== Připojení k úložišti, export a import ===== */
-const APP_VER = '2026-11-15b záloha, závaží, supersérie, rekordy';
+const APP_VER = '2026-11-15d oprava posouvání v dialozích';
 const normPath = (v, def) => { v = (v || '').trim() || def; return v[0] === '/' ? v : '/' + v; };
 
 function connHint() {
