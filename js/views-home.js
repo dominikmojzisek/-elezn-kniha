@@ -41,7 +41,7 @@ function viewHome() {
       return `<div class="card stack"><div class="row" style="justify-content:space-between"><h2>${esc(p.name)}</h2>${p.days.length > 1 ? '<span class="tag">Na řadě: ' + esc(p.days[ni].t) + '</span>' : ''}</div><div class="grid2">${days}</div></div>`;
     }).join('');
   }
-  return `<div class="top"><div><small>${new Date().toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })}</small><h1>Železná kniha</h1></div><button class="btn sm ghost" data-act="settings">Připojení</button></div>${connHint()}${coachSlot()}${stats}${body}`;
+  return `<div class="top"><div><small>${new Date().toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })}</small><h1>Železná kniha</h1></div><button class="btn sm ghost" data-act="settings">Připojení</button></div>${connHint()}${backupHint()}${coachSlot()}${stats}${body}`;
 }
 
 function viewSession() {
@@ -51,19 +51,29 @@ function viewSession() {
   const timer = s.rest
     ? `<div class="timer" id="restBox"><div><span class="lbl" style="color:inherit;opacity:.7">Pauza</span><div class="t" id="restT">${mmss((s.rest.end - Date.now()) / 1000)}</div></div><div class="row"><button class="btn sm" data-act="rest+">+30 s</button><button class="btn sm" data-act="rest0">Přeskočit</button></div></div>`
     : `<div class="timer"><div><span class="lbl" style="color:inherit;opacity:.7">Čas tréninku</span><div class="t" id="sessClock">${mmss((Date.now() - s.start) / 1000)}</div></div><span class="num">${done}/${total} sérií</span></div>`;
+  const place = s.place || 'gym';
   const items = s.items.map((it, i) => {
     const e = exOf(it.x), best = bestOf(it.x);
+    const cw = (it.sets.find(z => !z.ok) || it.sets[it.sets.length - 1] || {}).w || 0;
+    const nxt = it.ss && s.items[i + 1], prv = i > 0 && s.items[i - 1].ss;
+    const sst = nxt ? `<span class="tag">Supersérie s: ${esc(exOf(nxt.x).n)}</span>` : (prv ? '<span class="tag">Supersérie</span>' : '');
+    const plates = loadKind(it.x) === 'bb' && cw > 0 ? platesText(cw, place) : '';
+    const firstOfCat = s.items.findIndex(o => exOf(o.x).c === e.c) === i && !it.sets.some(z => z.ok);
+    const warm = firstOfCat ? warmupText(it.x, cw, place) : '';
+    const extra = (plates ? `<div class="num muted" style="font-size:13px">Na činku: ${esc(plates)}</div>` : '') + (warm ? `<div class="num muted" style="font-size:13px">Rozcvičení: ${esc(warm)}</div>` : '');
     const sets = it.sets.map((z, j) => `<div class="set${z.ok ? ' ok' : ''}"><span class="n">${j + 1}</span>
       <input inputmode="decimal" aria-label="Váha v kg, série ${j + 1}" data-f="w" data-i="${i}" data-j="${j}" value="${z.w || ''}" placeholder="kg">
       <input inputmode="numeric" aria-label="Opakování, série ${j + 1}" data-f="r" data-i="${i}" data-j="${j}" value="${z.r || ''}" placeholder="opak.">
       <button class="done" aria-label="Série ${j + 1} hotová" data-act="done" data-i="${i}" data-j="${j}">${z.ok ? '✓' : ''}</button></div>`).join('');
     return `<div class="card stack"><div class="ex"><div class="grow"><h3>${esc(e.n)}</h3><div class="mach">Stroj: <b>${esc(e.m)}</b></div></div><span class="tag num">${it.sets.length} × ${esc(it.plan)}</span></div>
+      ${sst || it.sets.some(z => z.pr) ? `<div class="row">${sst}${it.sets.some(z => z.pr) ? '<span class="tag" style="background:var(--ok);color:#fff">Nový rekord</span>' : ''}</div>` : ''}
       ${it.chg ? '<div><span class="tag chg">Změna od trenéra</span> <span style="font-size:14px">' + esc(it.chg) + '</span></div>' : ''}${it.note ? '<div class="card" style="padding:10px;font-size:14px"><b>Trenér:</b> ' + esc(it.note) + '</div>' : ''}
-      <div class="muted" style="font-size:14px">${esc(e.tip)}${best.w ? ` <span class="num">· rekord ${best.w} kg</span>` : ''}</div>
+      <div class="muted" style="font-size:14px">${esc(e.tip)}${best.w ? ` <span class="num">· rekord ${fmtKg(best.w)} kg</span>` : ''}</div>
+      ${it.sug ? `<div class="card" style="padding:10px;font-size:14px"><span class="tag">Doporučení</span> ${esc(it.sug)}${it.last ? `<div class="num muted" style="font-size:13px;margin-top:4px">${esc(it.last)}</div>` : ''}</div>` : ''}${extra}
       <div class="sets"><div class="set" style="font-size:11px"><span></span><span class="lbl" style="text-align:center">kg</span><span class="lbl" style="text-align:center">opakování</span><span></span></div>${sets}</div>
       <div class="row"><button class="btn sm ghost" data-act="addset" data-i="${i}">+ Série</button><button class="btn sm ghost" data-act="delset" data-i="${i}">− Série</button></div></div>`;
   }).join('');
-  const awake = 'wakeLock' in navigator ? `<div class="chips"><button class="chip" aria-pressed="${S.settings.keepAwake !== false}" data-act="awake">Displej zůstane zapnutý</button></div>` : '';
+  const awake = `<div class="chips">${'wakeLock' in navigator ? `<button class="chip" aria-pressed="${S.settings.keepAwake !== false}" data-act="awake">Displej zůstane zapnutý</button>` : ''}<button class="chip" aria-pressed="${S.settings.sound !== false}" data-act="sound">Zvuk na konci pauzy</button></div>`;
   return `<div class="top"><div><small>${esc(s.planName)}</small><h1>${esc(s.dayT)}</h1></div></div>${timer}${awake}
     <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}"><i style="width:${total ? done / total * 100 : 0}%"></i></div>${items}
     <div class="row"><button class="btn grow" data-act="sessadd">+ Přidat cvik</button></div>

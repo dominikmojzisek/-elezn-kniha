@@ -57,6 +57,13 @@ function toPlanDialog(x) {
 
 /* ===== Akce ===== */
 const curPlan = () => S.plans.find(x => x.id === ui.openPlan);
+function finishDialog(note) {
+  openDlg(`<h2>Jak to šlo?</h2>
+    <div class="chips" role="group" aria-label="Pocit z tréninku">${[1, 2, 3, 4, 5].map(n => `<button class="chip" aria-pressed="${ui.feel === n}" data-act="feel" data-v="${n}">${FEEL[n]}</button>`).join('')}</div>
+    <label class="field"><span class="lbl">Poznámka k tréninku (nepovinné)</span><textarea id="f-note" rows="3" maxlength="300" placeholder="např. bolelo rameno, málo spánku">${esc(note || '')}</textarea></label>
+    <p class="muted" style="margin:0;font-size:13px">Pocit ovlivní doporučení vah: po tréninku na hraně se váha nezvedá.</p>
+    <div class="row"><button class="btn pri grow" data-act="dofinish">Uložit trénink</button><button class="btn" data-act="close">Zpět</button></div>`);
+}
 const curDay = () => { const p = curPlan(); return p && p.days[ui.editDay]; };
 
 const ACTIONS = {
@@ -99,8 +106,8 @@ const ACTIONS = {
   sessadd: () => { pickMode = 'sess'; pickDialog(); },
   addex: el => {
     if (pickMode === 'sess' && S.sess) {
-      const e = exOf(el.dataset.x), lw = lastWeight(e.id);
-      S.sess.items.push({ x: e.id, rest: e.rest, plan: e.r, sets: Array.from({ length: e.s }, () => ({ w: lw, r: repsLow(e.r), ok: false })) });
+      const e = exOf(el.dataset.x);
+      S.sess.items.push(sessItem(e.id, e.r, e.rest, e.s, 0));
       closeDlg(); persist(); render(); toast('Přidáno: ' + e.n);
       requestAnimationFrame(() => scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
       return;
@@ -121,24 +128,33 @@ const ACTIONS = {
   },
   start: el => { if (S.sess) { toast('Nejdřív dokonči rozpracovaný trénink'); ui.tab = 'home'; render(); return; } startSession(el.dataset.p, +el.dataset.d); scrollTo(0, 0); },
   done: el => {
-    const it = S.sess.items[+el.dataset.i], z = it.sets[+el.dataset.j];
-    z.ok = !z.ok;
-    S.sess.rest = z.ok ? { end: Date.now() + (it.rest || 60) * 1000 } : null;
+    const i = +el.dataset.i, it = S.sess.items[i], z = it.sets[+el.dataset.j];
+    z.ok = !z.ok; delete z.pr;
+    soundUnlock();
+    const nxt = it.ss && S.sess.items[i + 1];
+    if (z.ok && isPr(it, z)) { z.pr = true; toast('Nový rekord: ' + exOf(it.x).n + ' ' + fmtKg(z.w) + ' kg'); }
+    else if (z.ok && nxt) toast('Supersérie: hned ' + exOf(nxt.x).n);
+    /* v supersérii se pauza spouští až po posledním cviku skupiny */
+    S.sess.rest = z.ok && !nxt ? { end: Date.now() + (it.rest || 60) * 1000 } : null;
     persist(); render();
   },
   addset: el => { const it = S.sess.items[+el.dataset.i], l = it.sets[it.sets.length - 1] || { w: 0, r: 8 }; it.sets.push({ w: l.w, r: l.r, ok: false }); persist(); render(); },
   delset: el => { const it = S.sess.items[+el.dataset.i]; if (it.sets.length > 1) it.sets.pop(); persist(); render(); },
   'rest+': () => { if (S.sess.rest) S.sess.rest.end += 30000; persist(); render(); },
   rest0: () => { S.sess.rest = null; persist(); render(); },
-  finish: () => finishSession(),
+  finish: () => { if (!S.sess.items.some(it => it.sets.some(z => z.ok))) { finishSession(); return; } ui.feel = 3; finishDialog(''); },
+  feel: el => { const n = ($('#f-note', dlg) || {}).value || ''; ui.feel = +el.dataset.v; finishDialog(n); },
+  dofinish: () => { const n = (($('#f-note', dlg) || {}).value || '').trim().slice(0, 300); closeDlg(); finishSession(ui.feel, n); },
   discard: () => askDlg('Zahodit rozpracovaný trénink?', 'dodiscard'),
   dodiscard: () => { S.sess = null; releaseScreen(); clearInterval(tick); tick = null; closeDlg(); persist(); render(); },
+  metric: el => { ui.metric = el.dataset.v; render(); },
+  histpick: el => { ui.histEx = ui.cex = el.dataset.x; render(); scrollTo(0, 0); },
   openlog: el => { ui.hist = ui.hist === el.dataset.l ? null : el.dataset.l; render(); },
   dellog: el => askDlg('Smazat tento záznam?', 'dodellog', `data-l="${el.dataset.l}"`),
   dodellog: el => { S.logs = S.logs.filter(l => l.id !== el.dataset.l); ui.hist = null; closeDlg(); persist(); render(); }
 };
 
-Object.assign(ACTIONS, COACH_ACTIONS, SETTINGS_ACTIONS);
+Object.assign(ACTIONS, COACH_ACTIONS, SETTINGS_ACTIONS, EXTRA_ACTIONS);
 const num = (v, lo, hi) => Math.min(hi, Math.max(lo, parseInt(v) || lo));
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-act]');

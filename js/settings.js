@@ -1,5 +1,5 @@
 /* ===== Připojení k úložišti, export a import ===== */
-const APP_VER = '2026-11-07 více domácích cviků';
+const APP_VER = '2026-11-15b záloha, závaží, supersérie, rekordy';
 const normPath = (v, def) => { v = (v || '').trim() || def; return v[0] === '/' ? v : '/' + v; };
 
 function connHint() {
@@ -37,8 +37,9 @@ function settingsDialog() {
     <div class="stack" data-prov="manual"><div class="muted" style="font-size:14px">Data zůstávají v tomto prohlížeči. Zálohu a přenos mezi klientem a trenérem děláš soubory níže, které můžeš uložit třeba do iCloud Drive nebo poslat zprávou.</div></div>
     <div class="row"><button class="btn pri grow" data-act="setsave">Uložit a připojit</button><button class="btn" data-act="close">Zavřít</button></div>
     <div class="muted" style="font-size:13px">Verze aplikace: ${APP_VER}</div>
-    <div class="lbl">Soubory</div>
-    <div class="row"><button class="btn sm" data-act="exportf" data-n="app">Export deníku</button><button class="btn sm" data-act="importf" data-n="app">Import deníku</button></div>
+    <div class="lbl">Záloha a soubory</div>
+    <div class="muted" style="font-size:13px">Záloha obsahuje deník, plány, vlastní cviky i nastavení.${S.settings.backupT ? ' Poslední: ' + new Date(S.settings.backupT).toLocaleDateString('cs-CZ') + '.' : ''}</div>
+    <div class="row"><button class="btn sm" data-act="exportf" data-n="app">Zálohovat vše</button><button class="btn sm" data-act="importf" data-n="app">Obnovit ze zálohy</button></div>
     <div class="row"><button class="btn sm" data-act="exportf" data-n="plans">Export plánů</button><button class="btn sm" data-act="importf" data-n="plans">Import plánů</button></div>`);
   applyProvVisibility(c.provider);
 }
@@ -55,7 +56,10 @@ function downloadJson(obj, name) {
 async function exportFile(name) {
   if (name === 'app') {
     if (Store.cfg.role === 'trainer') { const sn = await Store.doc('app').get(); if (!sn.exists) { toast('Deník zatím neexistuje'); return; } downloadJson(sn.data(), 'app.json'); }
-    else downloadJson(snapshotLocal(), 'app.json');
+    else {
+      downloadJson(snapshotLocal(), 'zelezna-kniha-zaloha-' + new Date().toISOString().slice(0, 10) + '.json');
+      S.settings.backupN = S.logs.length; S.settings.backupT = Date.now(); persist(); if (!dlg.open) render();
+    }
     return;
   }
   const snap = await Store.doc('plans').get();

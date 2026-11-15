@@ -108,6 +108,7 @@ function isAvail(e, place) {
     const h = st.home || {};
     return req.every(t => t.split('|').some(x => h[x] === true));
   }
+  if (e.gym === false) return false;
   const eq = st.eq || {};
   return (EQ_OF[e.id] || []).every(t => eq[t] !== false);
 }

@@ -64,13 +64,18 @@ async function plansFlush() {
   } catch (e) { /* bez cloudu aplikace funguje dál, zkusí se při další změně */ }
   P.saving = false;
 }
+const commentOf = id => { const d = MODE === 'coach' ? C.data : P.data; return (d && d.comments && d.comments[id]) || null; };
 function coachBannerHtml() {
   if (MODE !== 'client' || !P.data) return '';
   const ack = P.data.ackAt || 0, ch = (P.data.changes || []).filter(c => c.ts > ack);
-  if (!ch.length) return '';
+  const cms = Object.entries(P.data.comments || {}).filter(([id, c]) => c && c.text && c.ts > ack).map(([id, c]) => ({ l: S.logs.find(x => x.id === id), c })).filter(x => x.l);
+  if (!ch.length && !cms.length) return '';
   const lines = ch.slice(-12).map(c => `<li><b>${esc(c.day)}</b>: ${esc(c.ex)}, ${esc(c.text)}</li>`).join('');
-  return `<div class="card stack" style="border-color:var(--warn)"><div class="row"><span class="tag chg">Změna v plánu</span><span class="muted" style="font-size:14px">${hhmm(ch[ch.length - 1].ts)}</span></div>
-    <h3>Trenér změnil plán</h3><ul style="margin:0;padding-left:20px">${lines}</ul>
+  const notes = cms.map(x => `<div class="card" style="padding:10px;font-size:14px"><b>${esc(x.l.dayT)} ${fmtShort(x.l.date)}:</b> ${esc(x.c.text)}</div>`).join('');
+  const ts = Math.max(0, ...ch.map(c => c.ts), ...cms.map(x => x.c.ts));
+  return `<div class="card stack" style="border-color:var(--warn)"><div class="row"><span class="tag chg">${ch.length ? 'Změna v plánu' : 'Komentář trenéra'}</span><span class="muted" style="font-size:14px">${hhmm(ts)}</span></div>
+    ${ch.length ? `<h3>Trenér změnil plán</h3><ul style="margin:0;padding-left:20px">${lines}</ul>` : ''}
+    ${cms.length ? `<h3>Trenér okomentoval trénink</h3>${notes}` : ''}
     <button class="btn pri" data-act="coachack">Rozumím</button></div>`;
 }
 function coachCardHtml() {
@@ -99,6 +104,7 @@ async function enterCoach() {
     S.settings = Object.assign({ level: 1 }, (C.app && C.app.settings) || {});
     if (!S.settings.eq || typeof S.settings.eq !== 'object') S.settings.eq = {};
     if (!S.settings.home || typeof S.settings.home !== 'object') S.settings.home = {};
+    syncCustom();
     softRender();
   }, () => { C.loadingApp = false; });
   render();
@@ -124,7 +130,8 @@ function diffPlans(oldP, cur, ts, sentAt) {
     if (!o) text = 'přidán cvik';
     else {
       const parts = [];
-      for (const k of ['x', 's', 'r', 'rest', 'w', 'note']) {
+      for (const k of ['x', 's', 'r', 'rest', 'w', 'note', 'ss']) {
+        if (k === 'ss') { if (!!o.i.ss !== !!it.ss) parts.push(it.ss ? 'spojeno do supersérie s dalším cvikem' : 'supersérie zrušena'); continue; }
         if ((o.i[k] ?? '') === (it[k] ?? '')) continue;
         parts.push(k === 'x' ? `výměna: ${exOf(o.i.x).n} → ${name}` : k === 'note' ? 'poznámka trenéra' : `${L[k]} ${o.i[k] || 0} → ${it[k] || 0}`);
       }
@@ -197,15 +204,11 @@ function coachReport() {
   const tiles = `<div class="grid2"><div class="stat"><span class="lbl">Za 7 dní</span><b class="num">${r.week}×</b><span class="muted">tréninků</span></div>
     <div class="stat"><span class="lbl">Objem 7 dní</span><b class="num">${Math.round(r.weekVol / 100) / 10} t</b><span class="muted">kg × opakování</span></div>
     <div class="stat"><span class="lbl">Celkem</span><b class="num">${r.total}</b><span class="muted">tréninků</span></div></div>`;
-  const sids = Object.keys(r.series).sort((a, b) => exOf(a).n.localeCompare(exOf(b).n, 'cs'));
+  const sids = loggedExercises();
   if (!ui.cex || !sids.includes(ui.cex)) ui.cex = sids[0];
-  const chart = sids.length ? `<div class="card stack"><label class="field"><span class="lbl">Pokrok ve cviku</span><select id="cex" data-f="cex">${sids.map(x => `<option value="${x}"${x === ui.cex ? ' selected' : ''}>${esc(exOf(x).n)}</option>`).join('')}</select></label>${chartSvg(r.series[ui.cex])}</div>` : '';
-  const rows = r.sessions.map(l => {
-    const open = ui.hist === l.id, sets = l.items.reduce((a, it) => a + it.sets.length, 0);
-    const detail = open ? '<div class="stack" style="margin-top:10px">' + l.items.map(it => `<div><b>${esc(exOf(it.x).n)}</b><div class="num muted" style="font-size:14px">${it.sets.map(s => (s.w || 0) + '×' + s.r).join(' · ')}</div></div>`).join('') + '</div>' : '';
-    return `<div class="card"><button class="pickitem" style="background:transparent;border:0;padding:0" data-act="openlog" data-l="${l.id}" aria-expanded="${open}"><span><b>${esc(l.dayT)}</b><em>${fmtShort(l.date)} · ${esc(l.planName)}</em></span><span class="num muted" style="font-size:14px">${sets} sérií · ${Math.round(l.dur / 60)} min</span></button>${detail}</div>`;
-  }).join('') || '<div class="card muted">Klient zatím neodcvičil žádný trénink.</div>';
-  return tiles + chart + '<h2>Poslední tréninky</h2>' + rows;
+  const chart = sids.length ? `<div class="card stack"><label class="field"><span class="lbl">Vývoj zátěže ve cviku</span><select id="cex" data-f="cex">${sids.map(x => `<option value="${x}"${x === ui.cex ? ' selected' : ''}>${esc(exOf(x).n)}</option>`).join('')}</select></label>${loadCard(ui.cex)}</div>${loadOverview()}` : '';
+  const rows = r.sessions.map(logRow).join('') || '<div class="card muted">Klient zatím neodcvičil žádný trénink.</div>';
+  return tiles + chart + weekHtml() + prHtml() + '<h2>Poslední tréninky</h2>' + rows;
 }
 function coachPlan() {
   if (!C.data) return '<div class="card muted">Klient zatím nemá soubor s plány (plans.json). Otevře aplikaci připojenou k úložišti a soubor se vytvoří.</div>';
@@ -225,6 +228,16 @@ function coachChanges() {
 }
 
 const COACH_ACTIONS = {
+  /* komentář k odcvičenému tréninku se ukládá do plans.json (do deníku klienta trenér nezapisuje) */
+  cmsave: async el => {
+    const id = el.dataset.l, text = (($('#cm-' + id) || {}).value || '').trim().slice(0, 400);
+    try {
+      let none = false;
+      const res = await C.doc.transact(d => { if (!d) { none = true; return null; } return { comments: Object.assign({}, d.comments, { [id]: { text, ts: Date.now() } }) }; });
+      if (none) { toast('Klient zatím nemá soubor s plány'); return; }
+      C.data = res.data; toast(text ? 'Komentář uložen' : 'Komentář smazán'); render();
+    } catch (e) { toast('Uložení se nepovedlo. Máš ve sdílené složce právo úprav?'); }
+  },
   ctab: el => { ui.ctab = el.dataset.v; ui.openPlan = null; render(); scrollTo(0, 0); },
   coachack: async () => {
     const now = Date.now();
