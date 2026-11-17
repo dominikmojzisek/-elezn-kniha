@@ -5,11 +5,11 @@ function viewPlans() {
   const p = S.plans.find(x => x.id === ui.openPlan);
   if (p) return viewEditor(p);
   const list = S.plans.map(p => `<div class="card stack">
-    <div class="row" style="justify-content:space-between"><h2 class="grow">${esc(p.name)}</h2>${p.place === 'home' ? '<span class="tag">doma</span>' : ''}${p.days.some(d => d.ex.some(i => i.chg)) ? '<span class="tag chg">změna</span>' : ''}<span class="tag num">${p.days.length} dnů</span></div>
+    <div class="row" style="justify-content:space-between"><h2 class="grow">${esc(p.name)}</h2>${p.place === 'home' ? '<span class="tag">doma</span>' : (gymList().length > 1 ? `<span class="tag">${esc(placeName(p.place))}</span>` : '')}${p.days.some(d => d.ex.some(i => i.chg)) ? '<span class="tag chg">změna</span>' : ''}<span class="tag num">${p.days.length} dnů</span></div>
     <div class="muted" style="font-size:14px">${p.days.map(d => esc(d.t) + ' (' + d.ex.length + ')').join(' · ')}</div>
     <div class="row"><button class="btn pri" data-act="openplan" data-p="${p.id}">Upravit</button><button class="btn" data-act="copyplan" data-p="${p.id}">Kopírovat</button><button class="btn ghost bad" data-act="delplan" data-p="${p.id}">Smazat</button></div></div>`).join('');
   return `<div class="top"><h1>Plány</h1></div>${coachSlot()}<div class="card" id="coachCard">${coachCardHtml()}</div>
-    <div class="row"><button class="btn pri" data-act="gen">Vygenerovat plán</button><button class="btn" data-act="newplan">Prázdný plán</button><button class="btn ghost" data-act="eq">Vybavení klubu</button><button class="btn ghost" data-act="gear">Moje závaží</button></div>
+    <div class="row"><button class="btn pri" data-act="gen">Vygenerovat plán</button><button class="btn" data-act="newplan">Prázdný plán</button><button class="btn ghost" data-act="gyms">Posilovny a stroje</button><button class="btn ghost" data-act="gear">Moje závaží</button></div>
     ${list || '<div class="card muted">Zatím tu nic není. Vygeneruj si plán podle cíle, nebo si poskládej vlastní.</div>'}`;
 }
 

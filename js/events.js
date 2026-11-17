@@ -19,10 +19,10 @@ const sel = (id, opts) => `<label class="field"><span class="lbl">${opts.l}</spa
 
 function genDialog(place, keep = {}) {
   place = place || curPlace();
-  const splits = Object.entries(SPLITS).filter(([k, v]) => (v.place || 'gym') === place).map(([k, v]) => [k, v.n]);
+  const splits = Object.entries(SPLITS).filter(([k, v]) => (v.place === 'home') === (place === 'home')).map(([k, v]) => [k, v.n]);
   const treadOk = isAvail(exOf('walkinc'), place);
   openDlg(`<h2>Vygenerovat plán</h2>
-    ${sel('g-place', { l: 'Kde cvičíš', o: [['gym', 'V posilovně'], ['home', 'Doma']], v: place })}
+    ${sel('g-place', { l: 'Kde cvičíš', o: gymList().map(g => [g.id, g.name]).concat([['home', 'Doma']]), v: place })}
     ${sel('g-split', { l: 'Rozpis', o: splits, v: keep.split || splits[0][0] })}
     ${sel('g-goal', { l: 'Cíl', o: Object.entries(GOALS).map(([k, v]) => [k, v.n]), v: keep.goal || 'objem' })}
     ${sel('g-lvl', { l: 'Zkušenost', o: place === 'home' ? [[1, 'Začátečník'], [2, 'Pokročilý'], [3, 'Zkušený']] : [[1, 'Začátečník (stroje, 3 série)'], [2, 'Pokročilý'], [3, 'Zkušený (volné činky)']], v: keep.lvl || S.settings.level || 1 })}
@@ -38,14 +38,17 @@ function homeDialog() {
   openDlg(`<h2>Vybavení doma</h2><p class="muted" style="margin:0;font-size:14px">Zaškrtni, co doma máš. Nabídka cviků a generátor plánů se přizpůsobí. Podložka se počítá vždy.</p>
     <div class="row"><button class="btn sm" data-act="heoff">Nic nemám</button></div>${groups}<button class="btn pri" data-act="close">Hotovo</button>`);
 }
-function eqDialog() {
-  const eq = S.settings.eq;
+function eqDialog(place) {
+  place = place && place !== 'home' ? place : 'gym'; ui.eqPlace = place;
+  const eq = eqOf(place) || {}, def = place === 'gym', name = placeName(place);
   const groups = EQLIST.map(g => `<div class="stack"><div class="lbl">${g.g}</div>` + g.items.map(([t, n, web]) =>
-    `<label class="pickitem" style="cursor:pointer"><span><b>${esc(n)}</b>${web ? '<em>potvrzeno na webu klubu</em>' : ''}</span><input type="checkbox" data-eq="${t}" ${eq[t] === false ? '' : 'checked'} style="width:24px;height:24px"></label>`).join('') + '</div>').join('');
-  openDlg(`<h2>Vybavení klubu</h2><p class="muted" style="margin:0;font-size:14px">${esc(GYM_NAME)}: web uvádí stroje Panatta, Precor a Glute Builder, volné váhy a functional zónu. Konkrétní seznam strojů neuvádí, takže odškrtni, co v klubu nenajdeš. Generátor i knihovna cviků se podle toho přizpůsobí.</p>
-    <div class="row"><button class="btn sm" data-act="eqall">Vše zapnout</button><button class="btn sm" data-act="eqfree">Jen volné váhy a functional</button></div>${groups}<button class="btn pri" data-act="close">Hotovo</button>`);
+    `<label class="pickitem" style="cursor:pointer"><span><b>${esc(n)}</b>${def && !(S.settings.gymName) && web ? '<em>potvrzeno na webu klubu</em>' : ''}</span><input type="checkbox" data-eq="${t}" ${eq[t] === false ? '' : 'checked'} style="width:24px;height:24px"></label>`).join('') + '</div>').join('');
+  const info = def && !S.settings.gymName
+    ? `${esc(GYM_NAME)}: web uvádí stroje Panatta, Precor a Glute Builder, volné váhy a functional zónu. Konkrétní seznam strojů neuvádí, takže odškrtni, co v klubu nenajdeš.`
+    : `${esc(name)}: odškrtni stroje, které tam nejsou. Zaškrtnuté se počítají jako dostupné.`;
+  openDlg(`<h2>Vybavení: ${esc(name)}</h2><p class="muted" style="margin:0;font-size:14px">${info} Generátor i knihovna cviků se podle toho přizpůsobí.</p>
+    <div class="row"><button class="btn sm" data-act="eqall">Vše zapnout</button><button class="btn sm" data-act="eqfree">Jen volné váhy a functional</button><button class="btn sm" data-act="eqnone">Vše vypnout</button></div>${groups}<button class="btn pri" data-act="close">Hotovo</button>`);
 }
-let pc = 'all', pq = '', pickMode = 'day', pickX = null;
 function pickList() {
   const q = pq.trim().toLowerCase();
   const pl = curPlan(), place = (pl && pl.place) || 'gym';
@@ -78,20 +81,21 @@ const curDay = () => { const p = curPlan(); return p && p.days[ui.editDay]; };
 
 const ACTIONS = {
   awake: () => { S.settings.keepAwake = (S.settings.keepAwake === false); if (S.settings.keepAwake) holdScreen(); else releaseScreen(); persist(); render(); },
-  eq: () => eqDialog(),
+  eq: el => eqDialog((el && el.dataset && el.dataset.v) || (curPlace() === 'home' ? 'gym' : curPlace())),
   heq: () => homeDialog(),
   heoff: () => { S.settings.home = {}; persist(); homeDialog(); if (ui.tab === 'lib') render(); },
   place: el => { S.settings.place = el.dataset.v; persist(); render(); },
-  eqall: () => { S.settings.eq = {}; persist(); eqDialog(); },
-  eqfree: () => { const m = {}; EQLIST.forEach(g => g.items.forEach(([t]) => m[t] = ['db', 'bb', 'kb', 'trx', 'sled', 'med', 'box', 'bands', 'glute'].includes(t))); S.settings.eq = m; persist(); eqDialog(); },
+  eqall: () => { setEqOf(ui.eqPlace || 'gym', {}); persist(); eqDialog(ui.eqPlace); if (ui.tab === 'lib') render(); },
+  eqnone: () => { const m = {}; EQLIST.forEach(g => g.items.forEach(([t]) => { m[t] = false; })); setEqOf(ui.eqPlace || 'gym', m); persist(); eqDialog(ui.eqPlace); if (ui.tab === 'lib') render(); },
+  eqfree: () => { const m = {}; EQLIST.forEach(g => g.items.forEach(([t]) => m[t] = ['db', 'bb', 'kb', 'trx', 'sled', 'med', 'box', 'bands', 'glute'].includes(t))); setEqOf(ui.eqPlace || 'gym', m); persist(); eqDialog(ui.eqPlace); if (ui.tab === 'lib') render(); },
   showall: () => { ui.showAll = !ui.showAll; render(); },
   close: () => closeDlg(),
   tab: el => { ui.tab = el.dataset.v; if (ui.tab !== 'plans') ui.openPlan = null; render(); scrollTo(0, 0); },
   gen: () => genDialog(),
   dogen: () => {
     const lvl = +$('#g-lvl').value; S.settings.level = lvl;
-    const cd = $('#g-cardio');
-    const p = generatePlan($('#g-split').value, $('#g-goal').value, lvl, { cardio: cd ? cd.value : 'none' });
+    const cd = $('#g-cardio'), gp = $('#g-place');
+    const p = generatePlan($('#g-split').value, $('#g-goal').value, lvl, { cardio: cd ? cd.value : 'none', place: gp ? gp.value : curPlace() });
     S.plans.unshift(p); ui.tab = 'plans'; ui.openPlan = p.id; ui.editDay = 0;
     closeDlg(); persist(); render(); scrollTo(0, 0); toast('Plán vytvořen');
   },
@@ -197,7 +201,7 @@ document.addEventListener('change', ev => {
     genDialog(ev.target.value, { goal: v('g-goal'), lvl: v('g-lvl') }); return;
   }
   if (ev.target.dataset.heq) { S.settings.home[ev.target.dataset.heq] = ev.target.checked; persist(); if (ui.tab === 'lib') render(); return; }
-  if (ev.target.dataset.eq) { S.settings.eq[ev.target.dataset.eq] = ev.target.checked; persist(); if (ui.tab === 'lib') render(); return; }
+  if (ev.target.dataset.eq) { (eqOf(ui.eqPlace || 'gym') || S.settings.eq)[ev.target.dataset.eq] = ev.target.checked; persist(); if (ui.tab === 'lib') render(); return; }
   if (ev.target.dataset.f === 'histex') { ui.histEx = ev.target.value; render(); }
   if (ev.target.dataset.f === 'cex') { ui.cex = ev.target.value; render(); }
   if (ev.target.dataset.pf === 's') render();
@@ -211,6 +215,7 @@ if (S.sess) startTick();
 render();
 if (S.sess) holdScreen();
 initCloud();
+if (sessionStorage.getItem('zk.open') === 'settings') { sessionStorage.removeItem('zk.open'); settingsDialog(); }
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   const hadSW = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('sw.js').catch(() => {});

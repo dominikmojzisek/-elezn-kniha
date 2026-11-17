@@ -1,6 +1,6 @@
 /* ===== Stav a ukládání ===== */
-const LS_KEY = 'zeleznaKniha.v1';
-let S = { plans: [], logs: [], settings: { level: 1, eq: {}, home: {} }, sess: null };
+const LS_KEY = PROF.key('zeleznaKniha.v1');
+let S = { plans: [], logs: [], settings: { level: 1, eq: {}, home: {}, gyms: [], customEx: [] }, sess: null };
 let ui = { tab: 'home', cat: 'all', q: '', openPlan: null, editDay: 0, hist: null, genStep: null };
 let MODE = 'client';
 let dbDoc = null, saveTimer = null, saving = false, dirty = false;
@@ -33,6 +33,8 @@ function applyData(d) {
   if (!S.settings.eq || typeof S.settings.eq !== 'object') S.settings.eq = {};
   if (!S.settings.home || typeof S.settings.home !== 'object') S.settings.home = {};
   if (!Array.isArray(S.settings.customEx)) S.settings.customEx = [];
+  if (!Array.isArray(S.settings.gyms)) S.settings.gyms = [];
+  S.settings.gyms.forEach(g => { if (!g.eq || typeof g.eq !== 'object') g.eq = {}; });
   syncCustom();
   S.sess = d.sess || null;
 }
@@ -93,7 +95,8 @@ const newPlan = (name, days, place) => ({ id: uid(), name, place: place || 'gym'
 /* Generátor: z každé dvojice "a|b" vybere dostupný cvik podle úrovně; když nic z nabídky v klubu není,
    vezme jiný dostupný cvik ze stejné partie. Série a opakování upraví podle cíle. */
 function generatePlan(splitId, goalId, level, opts = {}) {
-  const sp = SPLITS[splitId], g = GOALS[goalId], place = sp.place || 'gym';
+  const sp = SPLITS[splitId], g = GOALS[goalId];
+  const place = sp.place === 'home' ? 'home' : (opts.place && opts.place !== 'home' && validPlace(opts.place) ? opts.place : 'gym');
   const specDays = sp.days.map(d => ({ t: d.t, ex: d.ex.slice() }));
   /* běžecký pás: rozcvička před, doběh po tréninku, nebo samostatný den */
   if (opts.cardio && opts.cardio !== 'none' && isAvail(exOf('walkinc'), place)) {

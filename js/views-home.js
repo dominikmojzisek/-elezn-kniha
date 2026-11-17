@@ -41,7 +41,7 @@ function viewHome() {
       return `<div class="card stack"><div class="row" style="justify-content:space-between"><h2>${esc(p.name)}</h2>${p.days.length > 1 ? '<span class="tag">Na řadě: ' + esc(p.days[ni].t) + '</span>' : ''}</div><div class="grid2">${days}</div></div>`;
     }).join('');
   }
-  return `<div class="top"><div><small>${new Date().toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })}</small><h1>Železná kniha</h1></div><button class="btn sm ghost" data-act="settings">Připojení</button></div>${connHint()}${backupHint()}${coachSlot()}${stats}${body}`;
+  return `<div class="top"><div><small>${new Date().toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long' })}</small><h1>Železná kniha</h1></div><button class="btn sm ghost" data-act="settings">Připojení</button></div>${profChip() ? `<div class="row">${profChip()}</div>` : ''}${connHint()}${backupHint()}${coachSlot()}${stats}${body}`;
 }
 
 function viewSession() {

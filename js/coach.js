@@ -104,6 +104,8 @@ async function enterCoach() {
     S.settings = Object.assign({ level: 1 }, (C.app && C.app.settings) || {});
     if (!S.settings.eq || typeof S.settings.eq !== 'object') S.settings.eq = {};
     if (!S.settings.home || typeof S.settings.home !== 'object') S.settings.home = {};
+    if (!Array.isArray(S.settings.gyms)) S.settings.gyms = [];
+    S.settings.gyms.forEach(g => { if (!g.eq || typeof g.eq !== 'object') g.eq = {}; });
     syncCustom();
     softRender();
   }, () => { C.loadingApp = false; });
@@ -187,7 +189,7 @@ async function coachFlush() {
 /* ---------- Trenérské obrazovky ---------- */
 function viewCoach() {
   const live = C.app && C.app.live ? '<span class="tag chg">Právě cvičí</span>' : '';
-  const head = `<div class="top"><div><small>Trenérský pohled</small><h1>Klient</h1></div><div class="row">${live}<button class="btn sm ghost" data-act="settings">Připojení</button></div></div>`;
+  const head = `<div class="top"><div><small>Trenérský pohled</small><h1>Klient</h1></div><div class="row">${live}${profChip()}<button class="btn sm ghost" data-act="settings">Připojení</button></div></div>`;
   if (C.loading || C.loadingApp) return head + '<div class="card muted">Načítám…</div>';
   if (C.err) return head + '<div class="card muted">Sdílená složka se nepodařilo načíst. Zkontroluj Připojení: úložiště a cestu ke složce, kterou ti klient nasdílel.</div>';
   if (!C.data && !C.app) return head + '<div class="card muted">Ve složce zatím nejsou soubory od klienta. Zkontroluj v Připojení cestu ke sdílené složce. Klient musí mít aplikaci připojenou k úložišti.</div>';

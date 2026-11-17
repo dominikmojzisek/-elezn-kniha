@@ -1,5 +1,5 @@
 /* ===== Připojení k úložišti, export a import ===== */
-const APP_VER = '2026-11-15d oprava posouvání v dialozích';
+const APP_VER = '2026-11-17 více posiloven a účtů';
 const normPath = (v, def) => { v = (v || '').trim() || def; return v[0] === '/' ? v : '/' + v; };
 
 function connHint() {
@@ -11,13 +11,23 @@ function connHint() {
   return '';
 }
 
+/* ---------- Účty ---------- */
+const profChip = () => { const r = PROF.reg(); return r.list.length > 1 ? `<button class="chip" data-act="profiles" aria-label="Přepnout účet">Účet: ${esc(PROF.name())}</button>` : ''; };
+function profDialog() {
+  const r = PROF.reg();
+  const rows = r.list.map(p => `<div class="card row" style="justify-content:space-between;flex-wrap:nowrap"><span class="grow"><b>${esc(p.name)}</b>${p.id === r.active ? ' <span class="tag">aktivní</span>' : ''}</span>${p.id === r.active ? '' : `<button class="btn sm pri" data-act="profswitch" data-id="${p.id}">Přepnout</button>`}</div>`).join('');
+  openDlg(`<h2>Účty</h2><p class="muted" style="margin:0;font-size:14px">Každý účet má vlastní připojení (úložiště, Dropbox App key, složka, role) a vlastní data v tomto zařízení. Hodí se pro oddělení více Dropboxů nebo pro trenéra s více klienty.</p>
+    <div class="stack">${rows}</div>
+    <div class="row"><button class="btn sm" data-act="profnew">+ Nový účet</button><button class="btn sm ghost" data-act="profrename">Přejmenovat aktivní</button>${r.list.length > 1 ? '<button class="btn sm ghost bad" data-act="profdel">Smazat účet</button>' : ''}</div>
+    <button class="btn" data-act="close">Zavřít</button>`);
+}
 function settingsDialog() {
   const c = Store.cfg, key = c.dbxKey || (window.APP_CONFIG && APP_CONFIG.dropboxAppKey) || '';
   const opt = (v, l, cur) => `<option value="${v}"${v === cur ? ' selected' : ''}>${l}</option>`;
   const status = Store.ready
     ? (Store.isManual() ? 'Ruční režim: data jsou v tomto zařízení.' : 'Připojeno k úložišti.')
     : (c.provider === 'manual' ? 'Ruční režim.' : 'Nepřipojeno.' + (Store.err ? ' ' + Store.err : ''));
-  openDlg(`<h2>Připojení</h2><div class="muted" style="font-size:14px">${esc(status)}</div>
+  openDlg(`<h2>Připojení</h2><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span class="muted" style="font-size:14px">Účet: <b>${esc(PROF.name())}</b></span><button class="btn sm" data-act="profiles">Účty</button></div><div class="muted" style="font-size:14px">${esc(status)}</div>
     <label class="field"><span class="lbl">Kdo jsem</span><select id="s-role">${opt('client', 'Klient (cvičím podle plánu)', c.role)}${opt('trainer', 'Trenér (upravuji plán klienta)', c.role)}</select></label>
     <label class="field"><span class="lbl">Úložiště</span><select id="s-prov">${opt('dropbox', 'Dropbox', c.provider)}${opt('webdav', 'Nextcloud / WebDAV', c.provider)}${opt('manual', 'Ručně (soubory, iCloud Drive přes Soubory)', c.provider)}</select></label>
     <div class="stack" data-prov="dropbox">
@@ -82,6 +92,35 @@ async function importFile(input) {
 }
 
 const SETTINGS_ACTIONS = {
+  profiles: () => profDialog(),
+  profswitch: el => { const r = PROF.reg(); if (!r.list.some(p => p.id === el.dataset.id)) return; r.active = el.dataset.id; PROF.save(r); location.reload(); },
+  profnew: () => openDlg(`<h2>Nový účet</h2><label class="field"><span class="lbl">Název účtu</span><input id="pn-name" maxlength="40" placeholder="např. Trenér, Dropbox 2" autocomplete="off"></label>
+    <p class="muted" style="margin:0;font-size:14px">Po vytvoření se přepneš do nového účtu a otevře se Připojení, kde zadáš úložiště a Dropbox App key.</p>
+    <div class="row"><button class="btn pri grow" data-act="profadd">Vytvořit a přepnout</button><button class="btn" data-act="profiles">Zpět</button></div>`),
+  profadd: () => {
+    const name = (($('#pn-name', dlg) || {}).value || '').trim().slice(0, 40);
+    if (!name) { toast('Zadej název účtu'); return; }
+    const r = PROF.reg(); let n = 2; while (r.list.some(p => p.id === 'p' + n)) n++;
+    r.list.push({ id: 'p' + n, name }); r.active = 'p' + n; PROF.save(r);
+    sessionStorage.setItem('zk.open', 'settings'); location.reload();
+  },
+  profrename: () => openDlg(`<h2>Přejmenovat účet</h2><label class="field"><span class="lbl">Název</span><input id="pn-name" maxlength="40" value="${esc(PROF.name())}" autocomplete="off"></label>
+    <div class="row"><button class="btn pri grow" data-act="profren">Uložit</button><button class="btn" data-act="profiles">Zpět</button></div>`),
+  profren: () => {
+    const name = (($('#pn-name', dlg) || {}).value || '').trim().slice(0, 40); if (!name) return;
+    const r = PROF.reg(); r.list.find(p => p.id === r.active).name = name; PROF.save(r); render(); profDialog();
+  },
+  profdel: () => {
+    const r = PROF.reg(), others = r.list.filter(p => p.id !== r.active);
+    openDlg(`<h2>Smazat účet</h2><p class="muted" style="margin:0;font-size:14px">Smaže se jen nastavení a data uložená v tomto zařízení. Soubory v Dropboxu nebo Nextcloudu zůstanou. Neexportovaná data ručního režimu se ztratí.</p>
+      ${sel('pd-id', { l: 'Který účet', o: others.map(p => [p.id, p.name]), v: others[0].id })}
+      <div class="row"><button class="btn bad grow" data-act="dopdel">Smazat</button><button class="btn" data-act="profiles">Zpět</button></div>`);
+  },
+  dopdel: () => {
+    const id = (($('#pd-id', dlg) || {}).value || ''); const r = PROF.reg();
+    if (!id || id === r.active) return;
+    PROF.wipe(id); r.list = r.list.filter(p => p.id !== id); PROF.save(r); profDialog(); toast('Účet smazán');
+  },
   settings: () => settingsDialog(),
   setsave: async () => {
     const g = id => ($('#' + id, dlg) || {}).value || '';

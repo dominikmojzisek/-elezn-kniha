@@ -6,7 +6,24 @@
    Soubory leží u poskytovatele podle nastavení: Dropbox, WebDAV (Nextcloud) nebo ručně (export/import souboru).
    Všichni poskytovatelé mají stejné rozhraní: read(path) -> {data, rev} | null, write(path, obj, rev, mode).
    Souběžné zápisy hlídá revize (Dropbox rev, WebDAV ETag); při kolizi se čte a zapisuje znovu. */
-const CFG_KEY = 'zk.cfg';
+/* Účty: každý má vlastní nastavení připojení (včetně Dropbox App key), přihlášení k úložišti a místní data.
+   Účet p1 používá původní klíče v prohlížeči, další mají za klíčem příponu .<id>. Přepnutí účtu znovu načte stránku. */
+const PROF = {
+  reg() { try { const r = JSON.parse(localStorage.getItem('zk.profiles') || 'null'); if (r && Array.isArray(r.list) && r.list.length && r.list.some(p => p.id === r.active)) return r; } catch (e) {} return { active: 'p1', list: [{ id: 'p1', name: 'Hlavní' }] }; },
+  save(r) { localStorage.setItem('zk.profiles', JSON.stringify(r)); },
+  key(base, id) { id = id || this.pid; return id === 'p1' ? base : base + '.' + id; },
+  fileKey(path, id) { id = id || this.pid; return 'zk.file.' + (id === 'p1' ? '' : id + ':') + path; },
+  name(id) { const p = this.reg().list.find(x => x.id === (id || this.pid)); return p ? p.name : ''; },
+  /* odstraní všechna místní data účtu */
+  wipe(id) {
+    [this.key('zk.cfg', id), this.key('zk.dbx', id), this.key('zeleznaKniha.v1', id)].forEach(k => localStorage.removeItem(k));
+    const pre = 'zk.file.' + id + ':';
+    Object.keys(localStorage).filter(k => k.startsWith(pre)).forEach(k => localStorage.removeItem(k));
+  }
+};
+PROF.pid = PROF.reg().active;
+const CFG_KEY = PROF.key('zk.cfg');
+const DBX_KEY = PROF.key('zk.dbx');
 const DEFAULT_CFG = {
   provider: 'manual', role: 'client',
   folder: '/ZeleznaKniha',
@@ -25,7 +42,7 @@ const ManualProv = {
   ready: () => true,
   async read(path) {
     try {
-      const raw = localStorage.getItem('zk.file.' + path); if (!raw) return null;
+      const raw = localStorage.getItem(PROF.fileKey(path)); if (!raw) return null;
       const o = JSON.parse(raw); return { data: o.data, rev: String(o.rev) };
     } catch (e) { return null; }
   },
@@ -33,7 +50,7 @@ const ManualProv = {
     const cur = await this.read(path);
     if (mode === 'cas' && ((rev == null && cur) || (rev != null && (!cur || cur.rev !== rev)))) throw conflict();
     const n = (cur ? +cur.rev : 0) + 1;
-    localStorage.setItem('zk.file.' + path, JSON.stringify({ rev: n, data: obj }));
+    localStorage.setItem(PROF.fileKey(path), JSON.stringify({ rev: n, data: obj }));
     return String(n);
   }
 };
@@ -42,7 +59,7 @@ const ManualProv = {
 const DbxProv = {
   kind: 'dropbox',
   key() { return Store.cfg.dbxKey || (window.APP_CONFIG && APP_CONFIG.dropboxAppKey) || ''; },
-  tok() { try { return JSON.parse(localStorage.getItem('zk.dbx') || 'null'); } catch (e) { return null; } },
+  tok() { try { return JSON.parse(localStorage.getItem(DBX_KEY) || 'null'); } catch (e) { return null; } },
   ready() { const t = this.tok(); return !!(t && t.refresh); },
   redirectUri() { return location.origin + location.pathname; },
   async login() {
@@ -67,7 +84,7 @@ const DbxProv = {
     });
     const j = await r.json();
     if (!r.ok) throw new Error('Dropbox: ' + (j.error_description || j.error || 'přihlášení selhalo'));
-    localStorage.setItem('zk.dbx', JSON.stringify({ refresh: j.refresh_token, access: j.access_token, exp: Date.now() + j.expires_in * 1000 - 60000 }));
+    localStorage.setItem(DBX_KEY, JSON.stringify({ refresh: j.refresh_token, access: j.access_token, exp: Date.now() + j.expires_in * 1000 - 60000 }));
     sessionStorage.removeItem('zk.pkce');
   },
   async access() {
@@ -78,8 +95,8 @@ const DbxProv = {
       body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: t.refresh, client_id: this.key() })
     });
     const j = await r.json();
-    if (!r.ok) { localStorage.removeItem('zk.dbx'); throw new Error('Dropbox odmítl přihlášení, přihlas se znovu'); }
-    localStorage.setItem('zk.dbx', JSON.stringify({ refresh: t.refresh, access: j.access_token, exp: Date.now() + j.expires_in * 1000 - 60000 }));
+    if (!r.ok) { localStorage.removeItem(DBX_KEY); throw new Error('Dropbox odmítl přihlášení, přihlas se znovu'); }
+    localStorage.setItem(DBX_KEY, JSON.stringify({ refresh: t.refresh, access: j.access_token, exp: Date.now() + j.expires_in * 1000 - 60000 }));
     return j.access_token;
   },
   async read(path) {

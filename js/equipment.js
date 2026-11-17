@@ -99,7 +99,13 @@ CATMAP.kondice = 'Kondice a pás';
 /* (domácí rozpisy jsou níže v bloku Další domácí cviky) */
 
 /* Dostupnost cviku. Klub: co není výslovně vypnuté, platí za dostupné. Doma: musí být zaškrtnuté všechno potřebné. */
-const curPlace = () => (typeof S === 'object' && S.settings && S.settings.place) || 'gym';
+/* Místa cvičení: 'home' a jedna nebo více posiloven. Výchozí posilovna má id 'gym' a vybavení v settings.eq (kvůli starším datům),
+   další jsou v settings.gyms ve tvaru { id, name, eq }. */
+const gymList = () => [{ id: 'gym', name: (S.settings && S.settings.gymName) || GYM_NAME }].concat(((S.settings && S.settings.gyms) || []).map(g => ({ id: g.id, name: g.name })));
+const validPlace = p => p === 'home' || gymList().some(g => g.id === p);
+const placeName = p => p === 'home' ? 'Doma' : (gymList().find(g => g.id === p) || gymList()[0]).name;
+const eqOf = place => { if (!place || place === 'gym') return S.settings.eq; const g = (S.settings.gyms || []).find(x => x.id === place); return g ? g.eq : S.settings.eq; };
+const curPlace = () => { const p = (typeof S === 'object' && S.settings && S.settings.place) || 'gym'; return validPlace(p) ? p : 'gym'; };
 function isAvail(e, place) {
   place = place || curPlace();
   const st = (typeof S === 'object' && S.settings) || {};
@@ -109,7 +115,7 @@ function isAvail(e, place) {
     return req.every(t => t.split('|').some(x => h[x] === true));
   }
   if (e.gym === false) return false;
-  const eq = st.eq || {};
+  const eq = (typeof S === 'object' && eqOf(place)) || {};
   return (EQ_OF[e.id] || []).every(t => eq[t] !== false);
 }
 

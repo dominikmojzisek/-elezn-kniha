@@ -165,7 +165,7 @@ function customDialog(id) {
     ${inp('m', 'Stroj nebo vybavení', c.m, 'maxlength="60" placeholder="např. jednoručky, kladka"')}
     ${inp('mu', 'Zapojené svaly', c.mu, 'maxlength="80"')}
     <div class="grid2" style="grid-template-columns:repeat(3,minmax(0,1fr))">${inp('s', 'Série', c.s, 'inputmode="numeric"')}${inp('r', 'Opak.', c.r, 'maxlength="14"')}${inp('rest', 'Pauza s', c.rest, 'inputmode="numeric"')}</div>
-    ${sel('cx-where', { l: 'Kde ho cvičíš', o: [['both', 'V posilovně i doma'], ['gym', 'Jen v posilovně'], ['home', 'Jen doma']], v: c.where || 'both' })}
+    ${sel('cx-where', { l: 'Kde ho cvičíš', o: [['both', 'V posilovnách i doma'], ['gym', 'Jen v posilovnách'], ['home', 'Jen doma']], v: c.where || 'both' })}
     ${inp('tip', 'Poznámka k provedení', c.tip, 'maxlength="160"')}
     <div class="row"><button class="btn pri grow" data-act="cxsave" data-x="${id || ''}">Uložit cvik</button><button class="btn" data-act="close">Zrušit</button></div>`);
 }
@@ -199,7 +199,7 @@ function gearDialog(place) {
   const g = gearRaw(place);
   const inp = (k, l, ph, mode = 'text') => `<label class="field"><span class="lbl">${l}</span><input id="gr-${k}" value="${esc(g[k])}" placeholder="${ph}" inputmode="${mode}" autocomplete="off"></label>`;
   openDlg(`<h2>Moje závaží</h2><p class="muted" style="margin:0;font-size:14px">Doporučené váhy se zaokrouhlí na to, co opravdu máš. Hodnoty odděluj mezerou. Prázdné pole znamená běžné kroky.</p>
-    <div class="chips" role="group" aria-label="Místo"><button class="chip" aria-pressed="${place === 'gym'}" data-act="gear" data-v="gym">Posilovna</button><button class="chip" aria-pressed="${place === 'home'}" data-act="gear" data-v="home">Doma</button></div>
+    <div class="chips" role="group" aria-label="Místo">${gymList().concat([{ id: 'home', name: 'Doma' }]).map(g => `<button class="chip" aria-pressed="${place === g.id}" data-act="gear" data-v="${g.id}">${esc(g.name)}</button>`).join('')}</div>
     ${inp('bar', 'Váha osy obouruční činky (kg)', '20', 'decimal')}
     ${inp('plates', 'Kotouče, které máš (kg)', '20 10 5 2,5 1,25')}
     ${inp('db', 'Jednoručky (kg)', '4 6 8 10 12 14 16')}
@@ -208,7 +208,48 @@ function gearDialog(place) {
     <div class="row"><button class="btn pri grow" data-act="gearsave" data-v="${place}">Uložit</button><button class="btn" data-act="close">Zavřít</button></div>`);
 }
 
+/* ---------- Posilovny ---------- */
+function gymsDialog() {
+  const rows = gymList().map(g => `<div class="card stack" style="padding:12px"><label class="field"><span class="lbl">Název</span><input id="gn-${g.id}" value="${esc(g.name)}" maxlength="50" autocomplete="off"></label>
+    <div class="row"><button class="btn sm" data-act="eq" data-v="${g.id}">Vybavení a stroje</button><button class="btn sm" data-act="gear" data-v="${g.id}">Závaží</button>${g.id === 'gym' ? '' : `<button class="btn sm ghost bad" data-act="gymdel" data-v="${g.id}">Smazat</button>`}</div></div>`).join('');
+  const src = [['all', 'Všechny stroje dostupné'], ['free', 'Jen volné váhy a functional'], ['none', 'Nic, zaškrtnu si sám']].concat(gymList().map(g => ['copy:' + g.id, 'Zkopírovat z: ' + g.name]));
+  openDlg(`<h2>Moje posilovny</h2><p class="muted" style="margin:0;font-size:14px">Každá posilovna má vlastní seznam strojů a závaží. Plán se vytváří pro konkrétní posilovnu a nabízí jen cviky, které tam zvládneš.</p>
+    ${rows}<div><button class="btn sm" data-act="gymnames">Uložit názvy</button></div>
+    <div class="card stack" style="padding:12px"><b>Přidat posilovnu</b>
+      <label class="field"><span class="lbl">Název</span><input id="gn-new" maxlength="50" placeholder="např. Fitko u práce" autocomplete="off"></label>
+      ${sel('gn-src', { l: 'Začít s vybavením', o: src, v: 'all' })}
+      <button class="btn pri" data-act="gymadd">Přidat a nastavit stroje</button></div>
+    <button class="btn" data-act="close">Hotovo</button>`);
+}
+const EQ_FREE = ['db', 'bb', 'kb', 'trx', 'sled', 'med', 'box', 'bands', 'glute'];
+function setEqOf(place, m) { if (place === 'gym') S.settings.eq = m; else { const g = S.settings.gyms.find(x => x.id === place); if (g) g.eq = m; } }
+
 const EXTRA_ACTIONS = {
+  gyms: () => gymsDialog(),
+  gymnames: () => {
+    gymList().forEach(g => { const v = (($('#gn-' + g.id, dlg) || {}).value || '').trim().slice(0, 50); if (!v) return; if (g.id === 'gym') S.settings.gymName = v; else { const x = S.settings.gyms.find(y => y.id === g.id); if (x) x.name = v; } });
+    persist(); render(); gymsDialog(); toast('Názvy uloženy');
+  },
+  gymadd: () => {
+    const name = (($('#gn-new', dlg) || {}).value || '').trim().slice(0, 50), src = ($('#gn-src', dlg) || {}).value || 'all';
+    if (!name) { toast('Zadej název posilovny'); return; }
+    let eq = {};
+    if (src === 'free') EQLIST.forEach(g => g.items.forEach(([t]) => { eq[t] = EQ_FREE.includes(t); }));
+    else if (src === 'none') EQLIST.forEach(g => g.items.forEach(([t]) => { eq[t] = false; }));
+    else if (src.startsWith('copy:')) eq = JSON.parse(JSON.stringify(eqOf(src.slice(5)) || {}));
+    const id = 'g_' + uid();
+    S.settings.gyms.push({ id, name, eq }); S.settings.place = id;
+    persist(); render(); eqDialog(id);
+  },
+  gymdel: el => askDlg('Smazat posilovnu? Plány pro ni se přesunou do výchozí posilovny.', 'dogymdel', `data-v="${el.dataset.v}"`),
+  dogymdel: el => {
+    const id = el.dataset.v;
+    S.settings.gyms = S.settings.gyms.filter(g => g.id !== id);
+    S.plans.forEach(p => { if (p.place === id) p.place = 'gym'; });
+    if (S.settings.gear) delete S.settings.gear[id];
+    if (S.settings.place === id) S.settings.place = 'gym';
+    persist(); render(); gymsDialog();
+  },
   gear: el => gearDialog(el.dataset.v),
   gearsave: el => {
     const g = {}; ['bar', 'plates', 'db', 'kb', 'mach'].forEach(k => { g[k] = ($('#gr-' + k, dlg).value || '').trim().slice(0, 120); });

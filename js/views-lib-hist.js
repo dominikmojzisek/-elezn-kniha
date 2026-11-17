@@ -19,10 +19,10 @@ function libList() {
 function viewLib() {
   const chips = [['all', 'Vše'], ...CATS.map(c => [c.id, c.n])].map(([id, n]) => `<button class="chip" aria-pressed="${ui.cat === id}" data-act="cat" data-v="${id}">${n}</button>`).join('');
   return `<div class="top"><h1>Cviky</h1><span class="tag num">${libItems().length} cviků</span></div>
-    <div class="chips" role="group" aria-label="Kde cvičíš"><button class="chip" aria-pressed="${curPlace() === 'gym'}" data-act="place" data-v="gym">Posilovna</button><button class="chip" aria-pressed="${curPlace() === 'home'}" data-act="place" data-v="home">Doma</button></div>
+    <div class="chips" role="group" aria-label="Kde cvičíš">${gymList().map(g => `<button class="chip" aria-pressed="${curPlace() === g.id}" data-act="place" data-v="${g.id}">${esc(g.name)}</button>`).join('')}<button class="chip" aria-pressed="${curPlace() === 'home'}" data-act="place" data-v="home">Doma</button></div>
     ${curPlace() === 'home'
       ? `<div class="card row" style="justify-content:space-between"><div class="grow"><b>Domácí cvičení</b><div class="muted" style="font-size:14px">Nabízí se cviky podle vybavení, které máš doma.</div></div><button class="btn sm" data-act="heq">Vybavení</button></div>`
-      : `<div class="card row" style="justify-content:space-between"><div class="grow"><b>${esc(GYM_NAME)}</b><div class="muted" style="font-size:14px">Cviky se filtrují podle vybavení klubu.</div></div><button class="btn sm" data-act="eq">Vybavení</button></div>`}
+      : `<div class="card row" style="justify-content:space-between"><div class="grow"><b>${esc(placeName(curPlace()))}</b><div class="muted" style="font-size:14px">Cviky se filtrují podle strojů v této posilovně.</div></div><button class="btn sm" data-act="eq" data-v="${curPlace()}">Stroje</button><button class="btn sm ghost" data-act="gyms">Posilovny</button></div>`}
     <div class="chips" role="group" aria-label="Kategorie">${chips}<button class="chip" aria-pressed="${!!ui.showAll}" data-act="showall">I nedostupné</button></div>
     <label class="field"><span class="lbl">Hledat cvik, stroj nebo sval</span><input id="libq" data-f="q" type="search" value="${esc(ui.q)}" placeholder="např. leg press, biceps"></label>
     <div class="row"><button class="btn sm" data-act="cxnew">+ Vlastní cvik</button><button class="btn sm ghost" data-act="gear">Moje závaží</button></div>
