@@ -1,5 +1,5 @@
 /* ===== Připojení k úložišti, export a import ===== */
-const APP_VER = '2026-11-17 více posiloven a účtů';
+const APP_VER = '2026-11-17 předvolba VALT';
 const normPath = (v, def) => { v = (v || '').trim() || def; return v[0] === '/' ? v : '/' + v; };
 
 function connHint() {

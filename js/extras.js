@@ -219,8 +219,13 @@ function gymsDialog() {
       <label class="field"><span class="lbl">Název</span><input id="gn-new" maxlength="50" placeholder="např. Fitko u práce" autocomplete="off"></label>
       ${sel('gn-src', { l: 'Začít s vybavením', o: src, v: 'all' })}
       <button class="btn pri" data-act="gymadd">Přidat a nastavit stroje</button></div>
+    ${hasValt() ? '' : `<div class="card stack" style="padding:12px"><b>Hotová předvolba</b><p class="muted" style="margin:0;font-size:14px">VALT Bučovice: jednoručky, osa a kotouče, kettlebelly, stojan, lavice, kladková věž s hrazdou, leg press, předkopávání, horní kladka, běžecký pás, TRX a gumy.</p><button class="btn" data-act="gymvalt">Přidat posilovnu VALT</button></div>`}
     <button class="btn" data-act="close">Hotovo</button>`);
 }
+/* Předvolba: VALT Bučovice (privatnifitness.cz), vybavení podle fotek a textu webu. Nepotvrzené stroje jsou odškrtnuté. */
+const VALT_ON = ['db', 'bb', 'kb', 'rack', 'bench', 'cable', 'pullbar', 'legpress', 'legext', 'latpd', 'tread', 'trx', 'bands'];
+const valtEq = () => { const eq = {}; EQLIST.forEach(g => g.items.forEach(([t]) => { eq[t] = VALT_ON.includes(t); })); return eq; };
+const hasValt = () => gymList().some(g => /^valt\b/i.test(g.name));
 const EQ_FREE = ['db', 'bb', 'kb', 'trx', 'sled', 'med', 'box', 'bands', 'glute'];
 function setEqOf(place, m) { if (place === 'gym') S.settings.eq = m; else { const g = S.settings.gyms.find(x => x.id === place); if (g) g.eq = m; } }
 
@@ -240,6 +245,12 @@ const EXTRA_ACTIONS = {
     const id = 'g_' + uid();
     S.settings.gyms.push({ id, name, eq }); S.settings.place = id;
     persist(); render(); eqDialog(id);
+  },
+  gymvalt: () => {
+    if (hasValt()) { toast('VALT už máš přidaný'); return; }
+    const id = 'g_' + uid();
+    S.settings.gyms.push({ id, name: 'VALT', eq: valtEq() }); S.settings.place = id;
+    persist(); render(); eqDialog(id); toast('VALT přidán, zkontroluj stroje');
   },
   gymdel: el => askDlg('Smazat posilovnu? Plány pro ni se přesunou do výchozí posilovny.', 'dogymdel', `data-v="${el.dataset.v}"`),
   dogymdel: el => {
