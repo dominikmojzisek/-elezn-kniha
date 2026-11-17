@@ -1,5 +1,6 @@
 /* ===== Dialogy ===== */
 let dlg;
+let pc = 'all', pq = '', pickX = null, pickMode = 'day';  /* stav dialogu Přidat cvik */
 /* Při otevřeném dialogu se stránka pod ním zamkne, aby se posouval jen obsah dialogu (hlavně na iPhonu). */
 let lockY = null;
 function lockPage() { if (lockY !== null) return; lockY = window.scrollY || 0; document.body.style.top = -lockY + 'px'; document.body.classList.add('lock'); }
@@ -115,9 +116,9 @@ const ACTIONS = {
     if (p.days.length === 1) p.days[0].ex = []; else p.days.splice(ui.editDay, 1);
     ui.editDay = 0; closeDlg(); persist(); render();
   },
-  pickex: () => { pickMode = 'day'; pickDialog(); },
+  pickex: () => { pickMode = 'day'; pc = 'all'; pq = ''; pickDialog(); },
   pcat: el => { pc = el.dataset.v; pickDialog(); },
-  sessadd: () => { pickMode = 'sess'; pickDialog(); },
+  sessadd: () => { pickMode = 'sess'; pc = 'all'; pq = ''; pickDialog(); },
   addex: el => {
     if (pickMode === 'sess' && S.sess) {
       const e = exOf(el.dataset.x);
