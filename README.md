@@ -19,6 +19,16 @@ Aplikace doporučuje váhu na příští trénink metodou dvojité progrese: nej
 hranice ve všech sériích se váha zvedne (jednoručky po 1 až 2 kg, ostatní po 1 / 2,5 / 5 kg podle zátěže). Dvakrát pod rozsahem nebo tři
 tréninky bez posunu znamenají ubrat 10 %. Doporučení se předvyplní do tréninku; váha zadaná trenérem má přednost.
 
+Více posiloven a účtů:
+
+- **Posilovny:** v záložce Cviky (tlačítko Posilovny) nebo v Plánech přidáš další posilovnu. Každá má vlastní název, seznam strojů a závaží.
+  Při přidání vybereš, s čím začít (všechny stroje, jen volné váhy, nic, nebo kopie jiné posilovny). Plán je vždy pro konkrétní místo
+  (posilovna nebo doma), generátor i nabídka cviků pak počítají jen s tím, co tam je. Smazáním posilovny se její plány přesunou do výchozí.
+- **Účty:** v Připojení tlačítko Účty. Každý účet má vlastní úložiště, Dropbox App key, složku, roli i přihlášení a vlastní místní data.
+  Přepnutí stránku znovu načte. Hodí se pro dva Dropboxy s různými App key, nebo pro trenéra, který sleduje víc klientů (účet na klienta).
+  Hlavní účet používá původní klíče v prohlížeči, takže stávající data zůstávají. Dropbox pro každý účet vyžaduje stejnou Redirect URI
+  (adresu aplikace) v nastavení příslušné Dropbox aplikace.
+
 Další funkce:
 
 - **Záloha:** v Připojení tlačítko Zálohovat vše (jeden soubor s deníkem, plány, vlastními cviky a nastavením) a Obnovit ze zálohy.
